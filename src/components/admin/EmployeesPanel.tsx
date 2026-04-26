@@ -13,8 +13,7 @@ import {
 import { supabase } from "@/lib/supabaseClient";
 import {
   DEPARTMENTS,
-  ROLES, // We use the roles imported from permissions.ts
-  type Department,
+  ROLES,
   type Role,
 } from "@/lib/permissions";
 
@@ -247,10 +246,6 @@ export default function EmployeesPanel() {
   );
 }
 
-/* ──────────────────────────────────────────────────────────────
-   Invite modal — calls the `invite-employee` Edge Function
-   ────────────────────────────────────────────────────────────── */
-
 function InviteModal({
   onClose,
   onInvited,
@@ -260,9 +255,8 @@ function InviteModal({
 }) {
   const [email, setEmail] = useState("");
   const [fullName, setFullName] = useState("");
-  // ROLES contains: ["Dev", "Admin", "CEO", "GM", "Finance_Manager", etc.]
   const [role, setRole] = useState<Role>("User");
-  const [departmentId, setDepartmentId] = useState(""); // Stores the UUID
+  const [departmentId, setDepartmentId] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
@@ -285,8 +279,8 @@ function InviteModal({
         body: {
           email: clean,
           full_name: fullName.trim(),
-          role, // Sending the plain role name ("CEO", "Dev", etc.)
-          department: departmentId || null, // FIX: Sending the UUID string, not the name
+          role,
+          department: departmentId || null,
         },
       });
       if (error) throw error;
@@ -359,7 +353,6 @@ function InviteModal({
               >
                 {ROLES.map((r) => (
                   <option key={r} value={r}>
-                    {/* Replaces underscores with spaces for display */}
                     {r.replace(/_/g, " ")}
                   </option>
                 ))}
@@ -412,10 +405,6 @@ function InviteModal({
     </motion.div>
   );
 }
-
-/* ──────────────────────────────────────────────────────────────
-   Simple rename modal
-   ────────────────────────────────────────────────────────────── */
 
 function EditNameModal({
   employee,
