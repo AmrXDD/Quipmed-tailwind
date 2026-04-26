@@ -27,7 +27,6 @@ export default function EmployeesPanel() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [inviteOpen, setInviteOpen] = useState(false);
-  const [editing, setEditing] = useState<Employee | null>(null);
   const [savingId, setSavingId] = useState<string | null>(null);
 
   const fetchRows = async () => {
@@ -117,7 +116,7 @@ export default function EmployeesPanel() {
                     <select
                       value={e.role}
                       onChange={(ev) => updateRow({ id: e.id, role: ev.target.value as Role })}
-                      className={selectCls}
+                      className="rounded-lg border border-white/10 bg-white/5 px-2 py-1 text-xs text-white focus:outline-none"
                     >
                       {ROLES.map((r) => (<option key={r} value={r}>{r}</option>))}
                     </select>
@@ -126,7 +125,7 @@ export default function EmployeesPanel() {
                     <select
                       value={e.department ?? ""}
                       onChange={(ev) => updateRow({ id: e.id, department: ev.target.value || null })}
-                      className={selectCls}
+                      className="rounded-lg border border-white/10 bg-white/5 px-2 py-1 text-xs text-white focus:outline-none"
                     >
                       <option value="">—</option>
                       {DEPARTMENTS.map((d) => (<option key={d} value={d}>{d}</option>))}
@@ -204,4 +203,3 @@ function InviteModal({ onClose, onInvited }: { onClose: () => void; onInvited: (
 }
 
 const inputCls = "w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2.5 text-sm text-white focus:outline-none";
-const selectCls = "rounded-lg border border-white/10 bg-white/5 px-2 py-1 text-xs text-white focus:outline-none";
