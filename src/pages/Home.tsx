@@ -9,10 +9,16 @@ import {
   Headset,
   ArrowRight,
   Sparkles,
-  Layers,
+  Scan,
+  Stethoscope,
+  Syringe,
+  Microscope,
+  HeartPulse,
+  Bed,
 } from "lucide-react";
 import ParticleCanvas from "@/components/ParticleCanvas";
 import FloatingTag from "@/components/FloatingTag";
+import BrandLogoGrid from "@/components/BrandLogoGrid";
 import { useCompanyInfo, useBrands, useProducts, useDepartments } from "@/hooks/useSupabase";
 
 export default function Home() {
@@ -20,6 +26,19 @@ export default function Home() {
   const { brands } = useBrands();
   const { products } = useProducts();
   const { departments } = useDepartments();
+
+  const subsByDept = (() => {
+    const map = new Map<string, string[]>();
+    for (const d of departments) map.set(d.id, []);
+    for (const p of products) {
+      if (!p.department_id || !p.subcategory) continue;
+      const arr = map.get(p.department_id);
+      if (!arr) continue;
+      if (!arr.includes(p.subcategory)) arr.push(p.subcategory);
+    }
+    for (const arr of map.values()) arr.sort();
+    return map;
+  })();
 
   const sloganRef = useRef<HTMLHeadingElement>(null);
   const subRef = useRef<HTMLParagraphElement>(null);
@@ -81,7 +100,8 @@ export default function Home() {
 
             <h1
               ref={sloganRef}
-              className="text-[clamp(2.5rem,6vw,5.5rem)] font-bold leading-[0.98] tracking-tight text-white"
+              className="text-[clamp(2.5rem,6vw,5.5rem)] font-bold leading-[1.08] tracking-tight text-white pb-2"
+              style={{ paddingBottom: "0.15em" }}
             >
               Leading Medical <br />
               <span className="relative inline-block">
@@ -169,8 +189,28 @@ export default function Home() {
             <div className="h-[60%] w-[60%] rounded-[48px] bg-gradient-to-br from-cyan-neon/10 via-mint/10 to-transparent blur-3xl" />
           </div>
 
-          {/* CT scan video — centered, transparent background */}
+          {/* CT scan video — centered, black background keyed out via luminance-to-alpha */}
           <div className="absolute inset-0 grid place-items-center">
+            {/* SVG filter: maps dark pixels (black bg) to transparent */}
+            <svg
+              aria-hidden="true"
+              width="0"
+              height="0"
+              style={{ position: "absolute" }}
+            >
+              <defs>
+                <filter id="ctscan-chromakey">
+                  <feColorMatrix
+                    type="matrix"
+                    values="
+                      1 0 0 0 0
+                      0 1 0 0 0
+                      0 0 1 0 0
+                      4 4 4 0 -1.2"
+                  />
+                </filter>
+              </defs>
+            </svg>
             <div className="relative h-[min(60vh,460px)] w-[min(46vh,360px)]">
               <video
                 src="/ct-scan.mp4"
@@ -180,8 +220,11 @@ export default function Home() {
                 playsInline
                 preload="auto"
                 aria-hidden="true"
-                className="h-full w-full rounded-3xl object-cover mix-blend-screen"
-                style={{ background: "transparent" }}
+                className="h-full w-full rounded-3xl object-cover"
+                style={{
+                  background: "transparent",
+                  filter: "url(#ctscan-chromakey) contrast(1.05) brightness(1.05)",
+                }}
               />
 
               {/* Floating tags — absolute, positioned around the video */}
@@ -224,7 +267,7 @@ export default function Home() {
           ──────────────────────────────────────────────────────── */}
       <section
         id="solutions"
-        className="relative border-t border-white/5 bg-black py-20 md:py-28"
+        className="relative border-t border-white/5 bg-navy-900 py-20 md:py-28"
       >
         <div
           aria-hidden="true"
@@ -237,9 +280,11 @@ export default function Home() {
                 Our Solutions
               </h2>
               <p className="mt-3 max-w-2xl text-3xl font-bold tracking-tight text-primary md:text-5xl">
-                {departments.length} clinical {departments.length === 1 ? "domain" : "domains"}.{" "}
-                <br className="hidden md:block" />
-                <span className="text-mint-soft">End-to-end coverage.</span>
+                {departments.length}{" "}
+                <span className="text-white">
+                  Medical {departments.length === 1 ? "Department" : "Departments"}
+                </span>
+                <span className="text-mint-soft"> & Healthcare solutions provider</span>
               </p>
               <p className="mt-5 max-w-xl text-primary/65">
                 From first diagnosis to recovery, QuipMed curates and supplies
@@ -259,6 +304,8 @@ export default function Home() {
           <div className="mt-12 grid gap-4 md:grid-cols-2 lg:grid-cols-3">
             {departments.map((d, i) => {
               const count = products.filter((p) => p.department_id === d.id).length;
+              const meta = getDepartmentMeta(d.slug, d.name);
+              const Icon = meta.Icon;
               return (
                 <motion.div
                   key={d.id}
@@ -271,29 +318,59 @@ export default function Home() {
                     ease: [0.2, 0.7, 0.2, 1],
                   }}
                   whileHover={{ y: -4 }}
-                  className="group relative flex flex-col overflow-hidden rounded-3xl border border-white/5 bg-white/[0.02] p-7 transition-all hover:border-mint-soft/40 hover:bg-white/[0.04]"
+                  className="solution-card group relative flex flex-col overflow-hidden rounded-3xl border border-white/10 bg-navy-800/70 p-7 shadow-[0_4px_30px_rgba(0,0,0,0.25)] transition-all hover:border-mint-soft/50 hover:bg-navy-800"
                 >
-                  <div className="flex items-start justify-between">
-                    <span className="grid h-12 w-12 place-items-center rounded-2xl bg-mint text-primary ring-1 ring-mint-soft/40 transition-transform group-hover:scale-110">
-                      <Layers size={20} strokeWidth={2.2} />
+                  <div
+                    aria-hidden="true"
+                    className={`pointer-events-none absolute inset-0 bg-gradient-to-br ${meta.gradient} opacity-60`}
+                  />
+                  <div className="relative flex items-start justify-between">
+                    <span className="grid h-14 w-14 place-items-center rounded-2xl bg-white text-navy-900 ring-1 ring-mint-soft/50 transition-transform group-hover:scale-110">
+                      <Icon size={24} strokeWidth={2.2} />
                     </span>
-                    <span className="rounded-full border border-white/10 bg-white/5 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-primary/70">
+                    <span className="rounded-full border border-white/20 bg-white/10 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-white">
                       {String(i + 1).padStart(2, "0")}
                     </span>
                   </div>
-                  <h3 className="mt-6 text-xl font-bold leading-tight text-primary">
+                  <h3 className="relative mt-6 text-xl font-bold leading-tight text-white">
                     {d.name}
                   </h3>
-                  <div className="mt-6 flex items-center justify-between border-t border-white/5 pt-4 text-xs">
+                  <p className="relative mt-2 text-sm text-white/70">
+                    {meta.tagline}
+                  </p>
+                  {(subsByDept.get(d.id) ?? []).length > 0 && (
+                    <div className="relative mt-5 -mx-1 overflow-x-auto">
+                      <div className="flex min-w-max gap-1 rounded-2xl border border-white/10 bg-white/[0.04] p-1.5">
+                        {(subsByDept.get(d.id) ?? []).map((s) => {
+                          const subCount = products.filter(
+                            (p) => p.department_id === d.id && p.subcategory === s,
+                          ).length;
+                          return (
+                            <Link
+                              key={s}
+                              to={`/products?department=${d.slug}&sub=${encodeURIComponent(s)}`}
+                              className="inline-flex items-center gap-2 whitespace-nowrap rounded-xl px-3 py-1.5 text-xs font-medium text-white/75 transition-colors hover:bg-mint hover:text-navy-900"
+                            >
+                              {s}
+                              <span className="rounded-full bg-white/10 px-1.5 py-0.5 text-[10px] font-semibold text-white/80">
+                                {subCount}
+                              </span>
+                            </Link>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+                  <div className="relative mt-6 flex items-center justify-between border-t border-white/10 pt-4 text-xs">
                     <span className="font-semibold text-mint-soft">
                       {count}{" "}
-                      <span className="font-normal text-primary/50">
+                      <span className="font-normal text-white/60">
                         product{count === 1 ? "" : "s"}
                       </span>
                     </span>
                     <Link
                       to={`/products?department=${d.slug}`}
-                      className="inline-flex items-center gap-1 text-primary/70 transition-colors hover:text-mint-soft"
+                      className="inline-flex items-center gap-1 font-semibold text-white transition-colors hover:text-mint-soft"
                     >
                       Explore
                       <ArrowRight
@@ -302,7 +379,6 @@ export default function Home() {
                       />
                     </Link>
                   </div>
-                  <span className="pointer-events-none absolute -bottom-28 -right-28 h-56 w-56 rounded-full bg-mint/25 opacity-0 blur-3xl transition-opacity duration-500 group-hover:opacity-100" />
                 </motion.div>
               );
             })}
@@ -394,53 +470,7 @@ export default function Home() {
             </Link>
           </div>
 
-          {brands.length === 0 ? (
-            <div className="rounded-2xl border border-white/5 bg-white/[0.02] p-8 text-center text-sm text-slate-mid">
-              No brand partners listed yet.
-            </div>
-          ) : (
-            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">
-              {brands.map((b) => (
-                <div
-                  key={b.id}
-                  className="group relative flex h-32 flex-col items-center justify-between rounded-xl border border-white/10 bg-black p-3 text-center transition-all hover:-translate-y-0.5 hover:border-mint-soft/40 [.theme-white_&]:border-black/10 [.theme-white_&]:bg-white [.theme-white_&]:hover:border-mint-soft/60"
-                >
-                  <Link
-                    to={`/products?brand=${b.id}`}
-                    title={`See ${b.name} products`}
-                    className="flex flex-1 w-full items-center justify-center"
-                  >
-                    {b.logo_url ? (
-                      <img
-                        src={b.logo_url}
-                        alt={b.name}
-                        loading="lazy"
-                        className="block h-10 max-h-10 w-full max-w-[140px] object-contain opacity-90 transition-opacity group-hover:opacity-100"
-                      />
-                    ) : (
-                      <span className="flex items-center gap-2 text-sm font-semibold text-white group-hover:text-white [.theme-white_&]:text-black">
-                        <span className="h-2 w-2 rounded-full bg-mint" />
-                        <span className="whitespace-nowrap tracking-tight">
-                          {b.name}
-                        </span>
-                      </span>
-                    )}
-                  </Link>
-
-                  {b.website_link && (
-                    <a
-                      href={b.website_link}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="mt-2 inline-flex items-center gap-1 rounded-full border border-white/15 bg-white/5 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-white/80 transition-colors hover:border-mint-soft/50 hover:text-white [.theme-white_&]:border-black/15 [.theme-white_&]:bg-black/5 [.theme-white_&]:text-black/70 [.theme-white_&]:hover:text-black"
-                    >
-                      Visit <ArrowRight size={10} />
-                    </a>
-                  )}
-                </div>
-              ))}
-            </div>
-          )}
+          <BrandLogoGrid brands={brands} />
         </div>
       </section>
 
@@ -480,4 +510,21 @@ export default function Home() {
       </section>
     </>
   );
+}
+
+function getDepartmentMeta(slug: string, name: string) {
+  const key = `${slug} ${name}`.toLowerCase();
+  if (key.includes("imag") || key.includes("diagnostic"))
+    return { Icon: Scan, gradient: "from-cyan-500/20 via-blue-500/10 to-transparent", tagline: "MRI, CT, X-ray, ultrasound and mammography systems." };
+  if (key.includes("furniture") || key.includes("physio"))
+    return { Icon: Bed, gradient: "from-emerald-500/20 via-teal-500/10 to-transparent", tagline: "Hospital beds, physiotherapy and rehabilitation." };
+  if (key.includes("steril") || key.includes("infection"))
+    return { Icon: ShieldCheck, gradient: "from-violet-500/20 via-fuchsia-500/10 to-transparent", tagline: "Autoclaves, disinfection and CSSD lines." };
+  if (key.includes("surg"))
+    return { Icon: Syringe, gradient: "from-rose-500/20 via-orange-500/10 to-transparent", tagline: "OR tables, lights, lasers and endoscopy." };
+  if (key.includes("patient") || key.includes("care"))
+    return { Icon: Stethoscope, gradient: "from-mint/20 via-cyan-neon/10 to-transparent", tagline: "Wound care, orthopedics and CGM." };
+  if (key.includes("life") || key.includes("support") || key.includes("monitor"))
+    return { Icon: HeartPulse, gradient: "from-red-500/20 via-pink-500/10 to-transparent", tagline: "Patient monitors, ECG and pulmonary function." };
+  return { Icon: Microscope, gradient: "from-mint/20 via-cyan-neon/10 to-transparent", tagline: "Specialty medical equipment." };
 }

@@ -9,6 +9,7 @@ export const ROLES = [
   "PR_Manager",
   "User",
 ] as const;
+
 export type Role = (typeof ROLES)[number];
 
 export const DEPARTMENTS = ["Medical", "Dental"] as const;
@@ -16,15 +17,12 @@ export type Department = (typeof DEPARTMENTS)[number];
 
 const norm = (r: string | null | undefined) => (r ?? "").toLowerCase();
 
-/** Full, unrestricted admin powers: Dev + Admin. */
 export const canManageEverything = (role: string | null) =>
   ["dev", "admin"].includes(norm(role));
 
-/** View-only executives: CEO, GM. Full read, no writes on catalog. */
 export const isExecutive = (role: string | null) =>
   ["ceo", "gm"].includes(norm(role));
 
-/** Any manager tier (department-scoped). */
 export const isManager = (role: string | null) =>
   [
     "finance_manager",
@@ -33,11 +31,9 @@ export const isManager = (role: string | null) =>
     "pr_manager",
   ].includes(norm(role));
 
-/** Can this role enter the admin console at all? */
 export const canAccessAdmin = (role: string | null) =>
   canManageEverything(role) || isExecutive(role) || isManager(role);
 
-/** Can this role create/edit/delete in the given section? */
 export function canEdit(
   role: string | null,
   section:
@@ -50,29 +46,13 @@ export function canEdit(
     | "inquiries",
 ): boolean {
   if (canManageEverything(role)) return true;
-  // CEO / GM: read-only except for Orders / Analytics
   if (isExecutive(role)) return section === "orders" || section === "analytics";
-  // Managers: can only update inquiries / orders in their own lane
   if (isManager(role)) return section === "inquiries" || section === "orders";
   return false;
 }
 
-/** Which sidebar sections this role can see. */
 export function visibleSections(role: string | null): Set<string> {
-  if (canManageEverything(role)) {
-    return new Set([
-      "overview",
-      "products",
-      "departments",
-      "brands",
-      "customers",
-      "orders",
-      "employees",
-      "payments",
-      "account",
-    ]);
-  }
-  if (isExecutive(role)) {
+  if (canManageEverything(role) || isExecutive(role)) {
     return new Set([
       "overview",
       "products",
@@ -91,11 +71,8 @@ export function visibleSections(role: string | null): Set<string> {
   return new Set(["account"]);
 }
 
-/** Map a Manager role to the department scope, if any. */
 export function managerDepartment(role: string | null): Department | null {
   const r = norm(role);
-  // By convention: Sales/PR Managers own Medical, Ops/Finance own Dental.
-  // Adjust here if your org splits differently.
   if (r === "sales_manager" || r === "pr_manager") return "Medical";
   if (r === "operations_manager" || r === "finance_manager") return "Dental";
   return null;

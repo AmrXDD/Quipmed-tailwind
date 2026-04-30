@@ -25,6 +25,7 @@ type FormState = {
   name: string;
   brand_id: string;
   category: string;
+  subcategory: string;
   price: string;
   stock: string;
   description: string;
@@ -36,6 +37,7 @@ const EMPTY_FORM: FormState = {
   name: "",
   brand_id: "",
   category: "",
+  subcategory: "",
   price: "",
   stock: "",
   description: "",
@@ -387,6 +389,7 @@ function AddProductModal({
         brand: brandName,
         brand_name: brandName,
         category: form.category.trim() || "Uncategorized",
+        subcategory: form.subcategory.trim() || null,
         price: form.is_quotable ? null : Number(form.price),
         stock: form.stock ? Number(form.stock) : null,
         description: form.description.trim() || null,
@@ -475,6 +478,15 @@ function AddProductModal({
               />
             </Field>
           </div>
+
+          <Field label="Sub-category (e.g. CT, X-Ray, MRI)">
+            <input
+              value={form.subcategory}
+              onChange={update("subcategory")}
+              className={inputCls}
+              placeholder="Used to group products inside a department"
+            />
+          </Field>
 
           <Field label="Department (optional)">
             <select

@@ -11,13 +11,13 @@ import {
   ArrowRight,
   BadgeCheck,
 } from "lucide-react";
-import { useCompanyInfo, useBrands, useProducts } from "@/hooks/useSupabase";
-import { CATEGORIES } from "@/data/seed-data";
+import { useCompanyInfo, useBrands, useProducts, useDepartments } from "@/hooks/useSupabase";
 
 export default function About() {
   const c = useCompanyInfo();
   const { brands } = useBrands();
   const { products } = useProducts();
+  const { departments } = useDepartments();
 
   return (
     <div className="min-h-screen bg-navy-900 pb-24 pt-32">
@@ -61,7 +61,7 @@ export default function About() {
           {[
             { k: "Brand Partners", v: `${brands.length}+` },
             { k: "Product Lines", v: `${products.length}+` },
-            { k: "Specialities", v: String(CATEGORIES.length) },
+            { k: "Specialities", v: String(departments.length) },
             { k: "Countries", v: "14" },
           ].map((s) => (
             <div key={s.k} className="rounded-2xl border border-white/5 bg-white/[0.02] p-5">
@@ -219,32 +219,37 @@ export default function About() {
             Specialities
           </h2>
           <p className="mt-3 max-w-2xl text-3xl font-bold tracking-tight text-primary md:text-4xl">
-            Six clinical domains. One trusted partner.
+            {departments.length} clinical domain{departments.length === 1 ? "" : "s"}. One trusted partner.
           </p>
         </header>
         <div className="mt-10 grid gap-3 md:grid-cols-2 lg:grid-cols-3">
-          {CATEGORIES.map((cat, i) => {
-            const count = products.filter((p) => p.category === cat).length;
+          {departments.map((d, i) => {
+            const count = products.filter((p) => p.department_id === d.id).length;
             return (
-              <motion.div
-                key={cat}
-                initial={{ opacity: 0, y: 16 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true, margin: "-10%" }}
-                transition={{ duration: 0.4, delay: i * 0.05 }}
-                className="group flex items-center justify-between gap-4 rounded-2xl border border-white/5 bg-white/[0.02] px-5 py-4 transition-all hover:border-mint/30 hover:bg-white/[0.04]"
+              <Link
+                key={d.id}
+                to={`/products?department=${d.slug}`}
+                className="block"
               >
-                <div>
-                  <p className="font-semibold text-primary">{cat}</p>
-                  <p className="text-xs text-primary/50">
-                    {count} product line{count === 1 ? "" : "s"}
-                  </p>
-                </div>
-                <Globe2
-                  size={18}
-                  className="text-primary/30 transition-colors group-hover:text-mint"
-                />
-              </motion.div>
+                <motion.div
+                  initial={{ opacity: 0, y: 16 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true, margin: "-10%" }}
+                  transition={{ duration: 0.4, delay: i * 0.05 }}
+                  className="group flex items-center justify-between gap-4 rounded-2xl border border-white/5 bg-white/[0.02] px-5 py-4 transition-all hover:border-mint/30 hover:bg-white/[0.04]"
+                >
+                  <div>
+                    <p className="font-semibold text-primary">{d.name}</p>
+                    <p className="text-xs text-primary/50">
+                      {count} product line{count === 1 ? "" : "s"}
+                    </p>
+                  </div>
+                  <Globe2
+                    size={18}
+                    className="text-primary/30 transition-colors group-hover:text-mint"
+                  />
+                </motion.div>
+              </Link>
             );
           })}
         </div>

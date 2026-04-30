@@ -6,6 +6,8 @@ import { useProducts, useDepartments, useBrands } from "@/hooks/useSupabase";
 import type { Product } from "@/lib/types";
 import { useCart } from "@/lib/cart";
 import { proxyImage } from "@/lib/img";
+import { productImageFor } from "@/data/productImages";
+import { expectedSubcategoriesFor } from "@/data/subcategories";
 
 const OTHER_SLUG = "other";
 
@@ -21,11 +23,15 @@ export default function Products() {
   const [filter, setFilter] = useState<string>(
     searchParams.get("department") ?? "all",
   );
+  const [subFilter, setSubFilter] = useState<string>(
+    searchParams.get("sub") ?? "all",
+  );
   const [active, setActive] = useState<Product | null>(null);
 
   useEffect(() => {
     const param = searchParams.get("department") ?? "all";
     setFilter(param);
+    setSubFilter(searchParams.get("sub") ?? "all");
   }, [searchParams]);
 
   const activeBrand = useMemo(
@@ -40,10 +46,22 @@ export default function Products() {
 
   const setFilterAndUrl = (next: string) => {
     setFilter(next);
+    setSubFilter("all");
+    searchParams.delete("sub");
     if (next === "all") {
       searchParams.delete("department");
     } else {
       searchParams.set("department", next);
+    }
+    setSearchParams(searchParams, { replace: true });
+  };
+
+  const setSubFilterAndUrl = (next: string) => {
+    setSubFilter(next);
+    if (next === "all") {
+      searchParams.delete("sub");
+    } else {
+      searchParams.set("sub", next);
     }
     setSearchParams(searchParams, { replace: true });
   };
@@ -54,7 +72,7 @@ export default function Products() {
     return m;
   }, [departments]);
 
-  const visible = useMemo(() => {
+  const inDepartment = useMemo(() => {
     let list = products;
     if (brandId) list = list.filter((p) => p.brand_id === brandId);
     if (filter === "all") return list;
@@ -63,6 +81,59 @@ export default function Products() {
     if (!id) return list.filter((p) => !p.department_id);
     return list.filter((p) => p.department_id === id);
   }, [filter, products, bySlug, brandId]);
+
+  // A product's effective sub = its `subcategory` if set, otherwise its `category`.
+  // Admin portal currently fills `category`; this lets the sidebar work without
+  // requiring a manual re-tag of every product.
+  const effectiveSub = (p: Product) =>
+    (p.subcategory && p.subcategory.trim()) ||
+    (p.category && p.category.trim() !== "Uncategorized" ? p.category : null);
+
+  const subcategories = useMemo(() => {
+    if (filter === "all") return [] as string[];
+    const set = new Set<string>();
+    for (const p of inDepartment) {
+      const s = effectiveSub(p);
+      if (s) set.add(s);
+    }
+    return Array.from(set).sort();
+  }, [inDepartment, filter]);
+
+  const subsByDept = useMemo(() => {
+    const map = new Map<string, string[]>();
+    // Seed with canonical taxonomy so empty departments still show their
+    // expected sub list to admins/customers.
+    for (const d of departments) {
+      map.set(d.slug, [...expectedSubcategoriesFor(d.slug, d.name)]);
+    }
+    map.set(OTHER_SLUG, []);
+    // Merge in subs actually present on products (admin-added).
+    for (const p of products) {
+      const s = effectiveSub(p);
+      if (!s) continue;
+      const dept = departments.find((d) => d.id === p.department_id);
+      const key = dept ? dept.slug : OTHER_SLUG;
+      const arr = map.get(key);
+      if (!arr) continue;
+      if (!arr.includes(s)) arr.push(s);
+    }
+    for (const arr of map.values()) arr.sort();
+    return map;
+  }, [products, departments]);
+
+  const subCount = (deptKey: string, sub: string) => {
+    if (deptKey === OTHER_SLUG)
+      return products.filter((p) => !p.department_id && effectiveSub(p) === sub).length;
+    const id = bySlug.get(deptKey);
+    if (!id) return 0;
+    return products.filter((p) => p.department_id === id && effectiveSub(p) === sub)
+      .length;
+  };
+
+  const visible = useMemo(() => {
+    if (subFilter === "all") return inDepartment;
+    return inDepartment.filter((p) => effectiveSub(p) === subFilter);
+  }, [inDepartment, subFilter]);
 
   const counts = useMemo(() => {
     const m = new Map<string, number>();
@@ -86,7 +157,7 @@ export default function Products() {
 
   return (
     <div className="min-h-screen bg-navy-900 pb-24 pt-32">
-      <div className="mx-auto max-w-7xl px-5 lg:px-8">
+      <div className="mx-auto max-w-[88rem] px-3 sm:px-5 lg:px-6">
         {/* ── Header ──────────────────────────────────────── */}
         <header className="flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
           <div>
@@ -126,136 +197,225 @@ export default function Products() {
           </div>
         )}
 
-        {/* ── Filter bar ──────────────────────────────────── */}
-        <div className="sticky top-20 z-30 -mx-1 mt-10 overflow-x-auto rounded-2xl border border-white/5 bg-navy-800/80 p-1.5 backdrop-blur-md">
-          <LayoutGroup id="filter-bar">
-            <div className="flex min-w-max gap-1">
-              {filters.map((f) => {
-                const isActive = filter === f.key;
-                return (
-                  <button
-                    key={f.key}
-                    onClick={() => setFilterAndUrl(f.key)}
+        {/* ── Content: Left Sidebar (Departments + Subcategories) + Grid ── */}
+        <div className="mt-10 flex flex-col items-start gap-6 lg:flex-row lg:gap-8">
+          {/* ── LEFT SIDEBAR ─────────────────────────────── */}
+          <aside className="relative z-10 w-full shrink-0 self-start lg:w-72">
+            <div className="flex flex-col rounded-2xl border border-white/10 bg-navy-800/90 p-3 shadow-[0_4px_30px_rgba(0,0,0,0.25)] backdrop-blur-md">
+              <h3 className="mb-3 px-3 pt-1 text-[11px] font-semibold uppercase tracking-[0.22em] text-mint-soft">
+                Departments
+              </h3>
+              <nav className="space-y-1 pr-1">
+                {/* All */}
+                <button
+                  onClick={() => setFilterAndUrl("all")}
+                  className={[
+                    "flex w-full items-center justify-between gap-2 rounded-xl px-3 py-2 text-left text-sm font-semibold transition-colors",
+                    filter === "all"
+                      ? "bg-cyan-neon text-navy-900"
+                      : "text-slate-light/85 hover:bg-white/5 hover:text-primary",
+                  ].join(" ")}
+                >
+                  <span>All products</span>
+                  <span
                     className={[
-                      "relative whitespace-nowrap rounded-xl px-4 py-2 text-sm font-medium transition-colors",
-                      isActive ? "text-navy-900" : "text-slate-light/70 hover:text-primary",
+                      "rounded-full px-1.5 py-0.5 text-[10px] font-semibold",
+                      filter === "all" ? "bg-navy-900/15 text-navy-900" : "bg-white/5 text-slate-mid",
                     ].join(" ")}
                   >
-                    {isActive && (
-                      <motion.span
-                        layoutId="filter-pill"
-                        className="absolute inset-0 -z-10 rounded-xl bg-cyan-neon"
-                        transition={{ type: "spring", stiffness: 400, damping: 34 }}
-                      />
-                    )}
-                    {f.label}
-                    <span
-                      className={[
-                        "ml-2 rounded-full px-1.5 py-0.5 text-[10px] font-semibold",
-                        isActive ? "bg-navy-900/15 text-navy-900" : "bg-white/5 text-slate-mid",
-                      ].join(" ")}
-                    >
-                      {counts.get(f.key) ?? 0}
-                    </span>
-                  </button>
-                );
-              })}
+                    {counts.get("all") ?? 0}
+                  </span>
+                </button>
+
+                {/* Each department + its subcategories */}
+                {filters
+                  .filter((f) => f.key !== "all")
+                  .map((f) => {
+                    const isActive = filter === f.key;
+                    const subs = subsByDept.get(f.key) ?? [];
+                    return (
+                      <div key={f.key} className="pt-0.5">
+                        <button
+                          onClick={() => setFilterAndUrl(f.key)}
+                          className={[
+                            "flex w-full items-center justify-between gap-2 rounded-xl px-3 py-2 text-left text-sm font-semibold transition-colors",
+                            isActive
+                              ? "bg-cyan-neon text-navy-900"
+                              : "text-slate-light/85 hover:bg-white/5 hover:text-primary",
+                          ].join(" ")}
+                        >
+                          <span className="truncate">{f.label}</span>
+                          <span
+                            className={[
+                              "rounded-full px-1.5 py-0.5 text-[10px] font-semibold",
+                              isActive ? "bg-navy-900/15 text-navy-900" : "bg-white/5 text-slate-mid",
+                            ].join(" ")}
+                          >
+                            {counts.get(f.key) ?? 0}
+                          </span>
+                        </button>
+
+                        {/* Nested subcategories — visible only when this dept is active */}
+                        {isActive && subs.length > 0 && (
+                          <ul className="mt-1 ml-2 space-y-0.5 border-l border-white/10 pl-3">
+                            <li>
+                              <button
+                                onClick={() => setSubFilterAndUrl("all")}
+                                className={[
+                                  "flex w-full items-center justify-between gap-2 rounded-lg px-2.5 py-1.5 text-left text-xs font-medium transition-colors",
+                                  subFilter === "all"
+                                    ? "bg-mint text-navy-900"
+                                    : "text-slate-light/70 hover:bg-white/5 hover:text-primary",
+                                ].join(" ")}
+                              >
+                                <span>Show all</span>
+                                <span
+                                  className={[
+                                    "rounded-full px-1.5 py-0.5 text-[10px] font-semibold",
+                                    subFilter === "all"
+                                      ? "bg-navy-900/15 text-navy-900"
+                                      : "bg-white/5 text-slate-mid",
+                                  ].join(" ")}
+                                >
+                                  {inDepartment.length}
+                                </span>
+                              </button>
+                            </li>
+                            {subs.map((s) => {
+                              const sActive = subFilter === s;
+                              return (
+                                <li key={s}>
+                                  <button
+                                    onClick={() => setSubFilterAndUrl(s)}
+                                    className={[
+                                      "flex w-full items-center justify-between gap-2 rounded-lg px-2.5 py-1.5 text-left text-xs font-medium transition-colors",
+                                      sActive
+                                        ? "bg-mint text-navy-900"
+                                        : "text-slate-light/70 hover:bg-white/5 hover:text-primary",
+                                    ].join(" ")}
+                                  >
+                                    <span className="truncate">{s}</span>
+                                    <span
+                                      className={[
+                                        "rounded-full px-1.5 py-0.5 text-[10px] font-semibold",
+                                        sActive
+                                          ? "bg-navy-900/15 text-navy-900"
+                                          : "bg-white/5 text-slate-mid",
+                                      ].join(" ")}
+                                    >
+                                      {subCount(f.key, s)}
+                                    </span>
+                                  </button>
+                                </li>
+                              );
+                            })}
+                          </ul>
+                        )}
+                      </div>
+                    );
+                  })}
+              </nav>
             </div>
-          </LayoutGroup>
-        </div>
+          </aside>
 
-        {/* ── Grid ────────────────────────────────────────── */}
-        <LayoutGroup id="product-grid">
-          <motion.div
-            layout
-            className="mt-8 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4"
-          >
-            {loading &&
-              Array.from({ length: 8 }).map((_, i) => (
-                <div
-                  key={`sk-${i}`}
-                  className="h-64 animate-pulse rounded-2xl border border-white/5 bg-navy-800/40"
-                />
-              ))}
-            <AnimatePresence mode="popLayout">
-              {!loading && visible.map((p) => (
-                <motion.button
-                  layout
-                  layoutId={`card-${p.id}`}
-                  key={p.id}
-                  onClick={() => setActive(p)}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, scale: 0.95 }}
-                  transition={{ duration: 0.35, ease: [0.2, 0.7, 0.2, 1] }}
-                  whileHover={{ y: -6, rotateX: 3, rotateY: -3 }}
-                  style={{ transformStyle: "preserve-3d", perspective: 1200 }}
-                  className="group relative overflow-hidden rounded-2xl border border-white/5 bg-navy-800/80 p-6 text-left transition-colors hover:border-cyan-neon/30"
-                >
-                  {/* image */}
-                  <div className="mb-5 flex h-40 items-center justify-center overflow-hidden rounded-xl bg-white/[0.03]">
-                    {p.image_url ? (
-                      <img
-                        src={proxyImage(p.image_url, { w: 480, h: 320 })}
-                        alt={p.name}
-                        loading="lazy"
-                        referrerPolicy="no-referrer"
-                        className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
-                      />
-                    ) : (
-                      <Package size={32} className="text-slate-mid" />
-                    )}
-                  </div>
-                  {/* tag */}
-                  <div className="flex items-start justify-between gap-3">
-                    <motion.span
-                      layoutId={`cat-${p.id}`}
-                      className="rounded-full border border-mint/25 bg-mint/10 px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-mint"
-                    >
-                      {p.subcategory ?? p.category}
-                    </motion.span>
-                    {p.featured && (
-                      <span className="rounded-full border border-cyan-neon/30 bg-cyan-neon/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-cyan-soft">
-                        Featured
-                      </span>
-                    )}
-                  </div>
-                  <motion.h3
-                    layoutId={`name-${p.id}`}
-                    className="mt-5 text-lg font-bold leading-tight text-primary transition-colors group-hover:text-cyan-soft"
-                  >
-                    {p.name}
-                  </motion.h3>
-                  {p.brand_name && (
-                    <p className="mt-1 text-xs font-medium uppercase tracking-[0.18em] text-slate-mid">
-                      by {p.brand_name}
-                    </p>
-                  )}
-                  <p className="mt-4 line-clamp-3 text-sm leading-relaxed text-slate-light/70">
-                    {p.description}
-                  </p>
-                  <div className="mt-6 flex items-center justify-between text-xs text-slate-mid">
-                    <span className="inline-flex items-center gap-1">
-                      <span className="h-1.5 w-1.5 rounded-full bg-mint" />
-                      {p.category}
-                    </span>
-                    <ArrowUpRight
-                      size={16}
-                      className="text-cyan-neon transition-transform group-hover:-translate-y-0.5 group-hover:translate-x-0.5"
+          {/* ── PRODUCT GRID ─────────────────────────────── */}
+          <div className="min-w-0 flex-1">
+            <LayoutGroup id="product-grid">
+              <motion.div
+                layout
+                className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3"
+              >
+                {loading &&
+                  Array.from({ length: 8 }).map((_, i) => (
+                    <div
+                      key={`sk-${i}`}
+                      className="h-64 animate-pulse rounded-2xl border border-white/5 bg-navy-800/40"
                     />
-                  </div>
-                  <span className="pointer-events-none absolute -bottom-28 -right-28 h-64 w-64 rounded-full bg-cyan-neon/10 opacity-0 blur-3xl transition-opacity group-hover:opacity-100" />
-                </motion.button>
-              ))}
-            </AnimatePresence>
-          </motion.div>
-        </LayoutGroup>
+                  ))}
+                <AnimatePresence mode="popLayout">
+                  {!loading && visible.map((p) => (
+                    <motion.button
+                      layout
+                      layoutId={`card-${p.id}`}
+                      key={p.id}
+                      onClick={() => setActive(p)}
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, scale: 0.95 }}
+                      transition={{ duration: 0.35, ease: [0.2, 0.7, 0.2, 1] }}
+                      whileHover={{ y: -6, rotateX: 3, rotateY: -3 }}
+                      style={{ transformStyle: "preserve-3d", perspective: 1200 }}
+                      className="group relative overflow-hidden rounded-2xl border border-white/5 bg-navy-800/80 p-6 text-left transition-colors hover:border-cyan-neon/30"
+                    >
+                      {/* image */}
+                      <div className="mb-5 flex h-40 items-center justify-center overflow-hidden rounded-xl bg-white">
+                        {(() => {
+                          const src = productImageFor(p.slug, p.image_url);
+                          return src ? (
+                            <img
+                              src={proxyImage(src, { w: 480, h: 320 })}
+                              alt={p.name}
+                              loading="lazy"
+                              referrerPolicy="no-referrer"
+                              className="h-full w-full object-contain transition-transform duration-500 group-hover:scale-105"
+                            />
+                          ) : (
+                            <Package size={32} className="text-slate-mid" />
+                          );
+                        })()}
+                      </div>
+                      {/* tag */}
+                      <div className="flex items-start justify-between gap-3">
+                        <motion.span
+                          layoutId={`cat-${p.id}`}
+                          className="rounded-full border border-mint/25 bg-mint/10 px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-mint"
+                        >
+                          {p.subcategory ?? p.category}
+                        </motion.span>
+                        {p.featured && (
+                          <span className="rounded-full border border-cyan-neon/30 bg-cyan-neon/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-cyan-soft">
+                            Featured
+                          </span>
+                        )}
+                      </div>
+                      <motion.h3
+                        layoutId={`name-${p.id}`}
+                        className="mt-5 text-lg font-bold leading-tight text-primary transition-colors group-hover:text-cyan-soft"
+                      >
+                        {p.name}
+                      </motion.h3>
+                      {p.brand_name && (
+                        <p className="mt-1 text-xs font-medium uppercase tracking-[0.18em] text-slate-mid">
+                          by {p.brand_name}
+                        </p>
+                      )}
+                      <p className="mt-4 line-clamp-3 text-sm leading-relaxed text-slate-light/70">
+                        {p.description}
+                      </p>
+                      <div className="mt-6 flex items-center justify-between text-xs text-slate-mid">
+                        <span className="inline-flex items-center gap-1">
+                          <span className="h-1.5 w-1.5 rounded-full bg-mint" />
+                          {p.category}
+                        </span>
+                        <ArrowUpRight
+                          size={16}
+                          className="text-cyan-neon transition-transform group-hover:-translate-y-0.5 group-hover:translate-x-0.5"
+                        />
+                      </div>
+                      <span className="pointer-events-none absolute -bottom-28 -right-28 h-64 w-64 rounded-full bg-cyan-neon/10 opacity-0 blur-3xl transition-opacity group-hover:opacity-100" />
+                    </motion.button>
+                  ))}
+                </AnimatePresence>
+              </motion.div>
+            </LayoutGroup>
 
-        {visible.length === 0 && !loading && (
-          <div className="mt-20 rounded-2xl border border-white/5 bg-navy-800/40 p-10 text-center text-slate-mid">
-            No products in this category yet.
+            {visible.length === 0 && !loading && (
+              <div className="mt-20 rounded-2xl border border-white/5 bg-navy-800/40 p-10 text-center text-slate-mid">
+                No products in this category yet.
+              </div>
+            )}
           </div>
-        )}
+        </div>
       </div>
 
       {/* ── Detail modal (layoutId shared with cards) ──── */}
@@ -310,16 +470,19 @@ function ProductDetail({
         >
           <X size={16} />
         </button>
-        {product.image_url && (
-          <div className="mb-6 flex h-64 items-center justify-center overflow-hidden rounded-2xl bg-white/[0.03]">
-            <img
-              src={proxyImage(product.image_url, { w: 960, h: 640 })}
-              alt={product.name}
-              referrerPolicy="no-referrer"
-              className="h-full w-full object-cover"
-            />
-          </div>
-        )}
+        {(() => {
+          const src = productImageFor(product.slug, product.image_url);
+          return src ? (
+            <div className="mb-6 flex h-64 items-center justify-center overflow-hidden rounded-2xl bg-white">
+              <img
+                src={proxyImage(src, { w: 960, h: 640 })}
+                alt={product.name}
+                referrerPolicy="no-referrer"
+                className="h-full w-full object-contain"
+              />
+            </div>
+          ) : null;
+        })()}
         <motion.span
           layoutId={`cat-${product.id}`}
           className="rounded-full border border-mint/25 bg-mint/10 px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-mint"

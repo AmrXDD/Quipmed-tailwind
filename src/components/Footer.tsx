@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { Mail, Phone, MapPin, Linkedin } from "lucide-react";
+import { Mail, Phone, MapPin, Linkedin, Download } from "lucide-react";
 import { useCompanyInfo } from "@/hooks/useSupabase";
 import Logo from "./Logo";
 
@@ -24,6 +24,13 @@ export default function Footer() {
                 </span>
               ))}
             </div>
+            <a
+              href="/QuipMed-Company-Profile.pdf"
+              download="QuipMed-Company-Profile.pdf"
+              className="mt-6 inline-flex items-center gap-2 rounded-full bg-mint px-5 py-2.5 text-sm font-semibold text-white transition-all hover:bg-mint-soft hover:shadow-neon"
+            >
+              <Download size={16} /> Download Company Profile
+            </a>
           </div>
 
           <div>
@@ -80,7 +87,15 @@ export default function Footer() {
       <div className="border-t border-white/5">
         <div className="mx-auto flex max-w-7xl flex-col items-center justify-between gap-3 px-5 py-6 text-xs text-slate-mid lg:flex-row lg:px-8">
           <p>
-            © {new Date().getFullYear()} {c.name}. {c.tagline} | Designed by Amr Gharmawy
+            © {new Date().getFullYear()} {c.name}. {c.tagline} | Designed and Developed by{" "}
+            <a
+              href="https://covalenstudios.com"
+              target="_blank"
+              rel="noreferrer"
+              className="font-semibold text-mint transition-colors hover:text-cyan-neon"
+            >
+              Amr Ghamrawy &amp; Covalen Studios
+            </a>
           </p>
           <p className="flex items-center gap-2">
             <span className="h-1.5 w-1.5 rounded-full bg-mint animate-pulse" />

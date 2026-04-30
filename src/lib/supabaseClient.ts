@@ -3,29 +3,22 @@ import { createClient } from "@supabase/supabase-js";
 const url = import.meta.env.VITE_SUPABASE_URL;
 const anon = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
-// Check if we actually have the strings
 export const HAS_SUPABASE = Boolean(url && anon);
 
-if (!HAS_SUPABASE) {
-  console.error("🚨 Missing VITE_SUPABASE_URL or VITE_SUPABASE_ANON_KEY in Vercel env vars!");
-}
-
-// FIX: We provide empty strings as fallback to prevent "L is null" or "undefined" errors
-export const supabase = HAS_SUPABASE
-  ? createClient(url || "", anon || "", {
-    auth: {
-      persistSession: true,
-      autoRefreshToken: true,
-      detectSessionInUrl: true,
-    },
-  })
-  : (null as any);
+// Providing fallbacks ensures the client object exists immediately
+export const supabase = createClient(url || "", anon || "", {
+  auth: {
+    persistSession: true,
+    autoRefreshToken: true,
+    detectSessionInUrl: true,
+  },
+});
 
 export const getUserProfile = async () => {
-  // Guard clause to prevent crashing if supabase is null
-  if (!supabase || !HAS_SUPABASE) return null;
-
+  if (!HAS_SUPABASE) return null;
+  
   try {
+    // getSession is faster than getUser for initial renders
     const { data: { session }, error: sessionError } = await supabase.auth.getSession();
     if (sessionError || !session?.user) return null;
 
@@ -35,13 +28,9 @@ export const getUserProfile = async () => {
       .eq("id", session.user.id)
       .single();
 
-    if (error || !data) {
-      console.warn("Profile fetch error:", error?.message);
-      return null;
-    }
+    if (error) return null;
     return data;
   } catch (err) {
-    console.error("Identity fetch failed:", err);
     return null;
   }
 };

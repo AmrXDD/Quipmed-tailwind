@@ -1,12 +1,11 @@
 import { Routes, Route, useLocation } from "react-router-dom";
 import { useState, useEffect, useCallback } from "react";
-import { AnimatePresence } from "framer-motion";
 
 import Nav from "@/components/Nav";
 import Footer from "@/components/Footer";
 import CartDrawer from "@/components/CartDrawer";
+import WhatsAppButton from "@/components/WhatsAppButton";
 import { CartProvider } from "@/lib/cart";
-import PageTransition from "@/components/PageTransition";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import Home from "@/pages/Home";
 import About from "@/pages/About";
@@ -139,13 +138,13 @@ export default function App() {
         {!isAdminPath && <Nav theme={theme} toggleTheme={toggleTheme} />}
         {!isAdminPath && <CartDrawer />}
 
-        <AnimatePresence mode="wait">
-          <Routes location={location} key={isAdminPath ? "admin-root" : location.pathname}>
-            <Route path="/" element={<PageTransition><Home /></PageTransition>} />
-            <Route path="/about" element={<PageTransition><About /></PageTransition>} />
-            <Route path="/products" element={<PageTransition><Products /></PageTransition>} />
-            <Route path="/brands" element={<PageTransition><Brands /></PageTransition>} />
-            <Route path="/contact" element={<PageTransition><Contact /></PageTransition>} />
+        <main key={location.pathname} className="min-h-screen bg-navy-900">
+          <Routes location={location}>
+            <Route path="/" element={<Home />} />
+            <Route path="/about" element={<About />} />
+            <Route path="/products" element={<Products />} />
+            <Route path="/brands" element={<Brands />} />
+            <Route path="/contact" element={<Contact />} />
 
             <Route path="/admin/login" element={<AdminLogin />} />
 
@@ -161,9 +160,10 @@ export default function App() {
               }
             />
           </Routes>
-        </AnimatePresence>
+        </main>
 
         {!isAdminPath && <Footer />}
+        {!isAdminPath && <WhatsAppButton />}
       </div>
     </CartProvider>
   );
