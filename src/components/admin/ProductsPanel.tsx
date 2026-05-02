@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { ImagePlus, Loader2, Package, Plus, Search, Trash2, X } from "lucide-react";
+import { ImagePlus, Loader2, Package, Pencil, Plus, Search, Trash2, X } from "lucide-react";
 import { supabase } from "@/lib/supabaseClient";
 import type { Brand, Department } from "@/lib/types";
 import { canEdit, managerDepartment } from "@/lib/permissions";
@@ -10,7 +10,9 @@ type Product = {
   id: string;
   name: string;
   category: string | null;
+  subcategory?: string | null;
   brand: string | null;
+  brand_id?: string | null;
   price: number | null;
   stock?: number | null;
   image_url?: string | null;
@@ -55,6 +57,7 @@ export default function ProductsPanel({
   const [error, setError] = useState<string | null>(null);
   const [query, setQuery] = useState("");
   const [modalOpen, setModalOpen] = useState(false);
+  const [editing, setEditing] = useState<Product | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
   const writable = canEdit(userRole ?? null, "products");
@@ -72,7 +75,7 @@ export default function ProductsPanel({
     let q = supabase
       .from("products")
       .select(
-        "id,name,category,brand,price,stock,image_url,description,is_quotable,department_id,departments(name),created_at",
+        "id,name,category,subcategory,brand,brand_id,price,stock,image_url,description,is_quotable,department_id,departments(name),created_at",
       )
       .order("created_at", { ascending: false });
 
@@ -255,18 +258,27 @@ export default function ProductsPanel({
                     </td>
                     <td className="px-5 py-3 text-right">
                       {writable ? (
-                        <button
-                          onClick={() => deleteProduct(p)}
-                          disabled={deletingId === p.id}
-                          className="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-[11px] font-medium text-slate-light transition-colors hover:border-red-400/30 hover:bg-red-500/10 hover:text-red-300 disabled:opacity-50"
-                        >
-                          {deletingId === p.id ? (
-                            <Loader2 size={12} className="animate-spin" />
-                          ) : (
-                            <Trash2 size={12} />
-                          )}
-                          Delete
-                        </button>
+                        <div className="inline-flex items-center justify-end gap-2">
+                          <button
+                            onClick={() => setEditing(p)}
+                            className="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-[11px] font-medium text-slate-light transition-colors hover:border-cyan-neon/40 hover:bg-cyan-neon/10 hover:text-white"
+                          >
+                            <Pencil size={12} />
+                            Edit
+                          </button>
+                          <button
+                            onClick={() => deleteProduct(p)}
+                            disabled={deletingId === p.id}
+                            className="inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-[11px] font-medium text-slate-light transition-colors hover:border-red-400/30 hover:bg-red-500/10 hover:text-red-300 disabled:opacity-50"
+                          >
+                            {deletingId === p.id ? (
+                              <Loader2 size={12} className="animate-spin" />
+                            ) : (
+                              <Trash2 size={12} />
+                            )}
+                            Delete
+                          </button>
+                        </div>
                       ) : (
                         <span className="text-[11px] text-slate-mid">—</span>
                       )}
@@ -286,6 +298,16 @@ export default function ProductsPanel({
             onCreated={() => {
               setModalOpen(false);
               fetchProducts(); // Refresh list to get joined department data
+            }}
+          />
+        )}
+        {editing && (
+          <EditProductModal
+            product={editing}
+            onClose={() => setEditing(null)}
+            onSaved={() => {
+              setEditing(null);
+              fetchProducts();
             }}
           />
         )}
@@ -633,5 +655,364 @@ function Field({
       </span>
       {children}
     </label>
+  );
+}
+
+function EditProductModal({
+  product,
+  onClose,
+  onSaved,
+}: {
+  product: Product;
+  onClose: () => void;
+  onSaved: () => void;
+}) {
+  const [form, setForm] = useState<FormState>({
+    name: product.name ?? "",
+    brand_id: product.brand_id ?? "",
+    category: product.category ?? "",
+    subcategory: product.subcategory ?? "",
+    price: product.price != null ? String(product.price) : "",
+    stock: product.stock != null ? String(product.stock) : "",
+    description: product.description ?? "",
+    is_quotable: !!product.is_quotable,
+    department_id: product.department_id ?? "",
+  });
+  const [file, setFile] = useState<File | null>(null);
+  const [preview, setPreview] = useState<string | null>(null);
+  const [removeImage, setRemoveImage] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+  const [departments, setDepartments] = useState<Department[]>([]);
+  const [brands, setBrands] = useState<Brand[]>([]);
+  const fileRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (!supabase) return;
+    (async () => {
+      const [depts, brs] = await Promise.all([
+        supabase
+          .from("departments")
+          .select("*")
+          .order("sort_order", { ascending: true }),
+        supabase
+          .from("brands")
+          .select("*")
+          .order("sort_order", { ascending: true }),
+      ]);
+      if (depts.data) setDepartments(depts.data as Department[]);
+      if (brs.data) setBrands(brs.data as Brand[]);
+    })();
+  }, []);
+
+  const update =
+    (k: keyof FormState) =>
+      (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) =>
+        setForm((f) => ({ ...f, [k]: e.target.value }));
+
+  const onFile = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const f = e.target.files?.[0] ?? null;
+    setFile(f);
+    setPreview(f ? URL.createObjectURL(f) : null);
+    if (f) setRemoveImage(false);
+  };
+
+  // Best-effort delete of an old uploaded image so we don't orphan storage objects.
+  const deleteStorageObject = async (url: string | null | undefined) => {
+    if (!supabase || !url) return;
+    const marker = "/product-images/";
+    const idx = url.indexOf(marker);
+    if (idx === -1) return;
+    const path = url.slice(idx + marker.length);
+    try {
+      await supabase.storage.from("product-images").remove([path]);
+    } catch {
+      /* non-fatal */
+    }
+  };
+
+  const submit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!supabase) return;
+    setErr(null);
+
+    if (!form.name.trim()) {
+      setErr("Name is required.");
+      return;
+    }
+    if (!form.is_quotable && !form.price) {
+      setErr("Price is required for non-quotable products.");
+      return;
+    }
+
+    setSubmitting(true);
+    try {
+      let imageUrl: string | null | undefined = product.image_url ?? null;
+
+      if (file) {
+        const ext = file.name.split(".").pop() || "jpg";
+        const path = `${crypto.randomUUID()}.${ext}`;
+        const { error: uploadErr } = await supabase.storage
+          .from("product-images")
+          .upload(path, file, { cacheControl: "3600", upsert: false });
+        if (uploadErr) throw uploadErr;
+        const { data } = supabase.storage.from("product-images").getPublicUrl(path);
+        imageUrl = data.publicUrl;
+        await deleteStorageObject(product.image_url);
+      } else if (removeImage) {
+        await deleteStorageObject(product.image_url);
+        imageUrl = null;
+      }
+
+      const selectedBrand = brands.find((b) => b.id === form.brand_id);
+      const brandName = selectedBrand?.name ?? null;
+
+      // NOTE: slug is intentionally omitted — keeping it stable preserves any
+      // routes, image overrides, or external references that key off it.
+      const payload = {
+        name: form.name.trim(),
+        brand_id: form.brand_id || null,
+        brand: brandName,
+        brand_name: brandName,
+        category: form.category.trim() || "Uncategorized",
+        subcategory: form.subcategory.trim() || null,
+        price: form.is_quotable ? null : Number(form.price),
+        stock: form.stock ? Number(form.stock) : null,
+        description: form.description.trim() || null,
+        is_quotable: form.is_quotable,
+        department_id: form.department_id || null,
+        image_url: imageUrl,
+      };
+
+      const { error: updateErr } = await supabase
+        .from("products")
+        .update(payload)
+        .eq("id", product.id);
+      if (updateErr) throw updateErr;
+
+      onSaved();
+    } catch (e: any) {
+      setErr(e.message ?? "Failed to update product.");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const currentImage = preview ?? (removeImage ? null : product.image_url ?? null);
+
+  return (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      className="fixed inset-0 z-50 flex items-center justify-center bg-navy-900/80 p-4 backdrop-blur-sm"
+      onClick={onClose}
+    >
+      <motion.div
+        initial={{ opacity: 0, y: 20, scale: 0.97 }}
+        animate={{ opacity: 1, y: 0, scale: 1 }}
+        exit={{ opacity: 0, y: 10, scale: 0.97 }}
+        transition={{ type: "spring", damping: 22, stiffness: 240 }}
+        onClick={(e) => e.stopPropagation()}
+        className="w-full max-w-lg overflow-hidden rounded-2xl border border-white/10 bg-navy-900 shadow-[0_0_60px_-15px_rgba(34,211,238,0.35)]"
+      >
+        <div className="flex items-center justify-between border-b border-white/5 px-6 py-4">
+          <h3 className="flex items-center gap-2 text-sm font-semibold uppercase tracking-[0.2em] text-cyan-soft">
+            <Pencil size={14} className="text-cyan-neon" /> Edit product
+          </h3>
+          <button
+            onClick={onClose}
+            className="text-slate-mid transition-colors hover:text-white"
+          >
+            <X size={18} />
+          </button>
+        </div>
+
+        <form onSubmit={submit} className="max-h-[80vh] overflow-y-auto space-y-4 px-6 py-5 custom-scrollbar">
+          <Field label="Name" required>
+            <input
+              value={form.name}
+              onChange={update("name")}
+              className={inputCls}
+              placeholder="e.g. Portable Ultrasound X3"
+            />
+          </Field>
+
+          <div className="grid grid-cols-2 gap-3">
+            <Field label="Brand">
+              <select
+                value={form.brand_id}
+                onChange={(e) =>
+                  setForm((f) => ({ ...f, brand_id: e.target.value }))
+                }
+                className={inputCls}
+              >
+                <option value="">— No brand —</option>
+                {brands.map((b) => (
+                  <option key={b.id} value={b.id}>
+                    {b.name}
+                  </option>
+                ))}
+              </select>
+            </Field>
+            <Field label="Category">
+              <input
+                value={form.category}
+                onChange={update("category")}
+                className={inputCls}
+              />
+            </Field>
+          </div>
+
+          <Field label="Sub-category (e.g. CT, X-Ray, MRI)">
+            <input
+              value={form.subcategory}
+              onChange={update("subcategory")}
+              className={inputCls}
+              placeholder="Used to group products inside a department"
+            />
+          </Field>
+
+          <Field label="Department (optional)">
+            <select
+              value={form.department_id}
+              onChange={(e) =>
+                setForm((f) => ({ ...f, department_id: e.target.value }))
+              }
+              className={inputCls}
+            >
+              <option value="">— Other (no department) —</option>
+              {departments.map((d) => (
+                <option key={d.id} value={d.id}>
+                  {d.name}
+                </option>
+              ))}
+            </select>
+          </Field>
+
+          <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-white/10 bg-white/5 p-3">
+            <input
+              type="checkbox"
+              checked={form.is_quotable}
+              onChange={(e) =>
+                setForm((f) => ({ ...f, is_quotable: e.target.checked }))
+              }
+              className="mt-0.5 h-4 w-4 accent-cyan-neon"
+            />
+            <span className="space-y-1">
+              <span className="block text-xs font-semibold text-white">
+                MOH Regulated / Request Quote Only
+              </span>
+              <span className="block text-[11px] text-slate-light">
+                Hides price and buttons on the public site. Customers go through
+                the inquiry flow instead.
+              </span>
+            </span>
+          </label>
+
+          <div className="grid grid-cols-2 gap-3">
+            <Field label={form.is_quotable ? "Price (disabled)" : "Price (USD)"}>
+              <input
+                type="number"
+                step="0.01"
+                min="0"
+                value={form.is_quotable ? "" : form.price}
+                onChange={update("price")}
+                disabled={form.is_quotable}
+                className={`${inputCls} ${form.is_quotable ? "opacity-40" : ""}`}
+              />
+            </Field>
+            <Field label="Stock">
+              <input
+                type="number"
+                min="0"
+                value={form.stock}
+                onChange={update("stock")}
+                className={inputCls}
+              />
+            </Field>
+          </div>
+
+          <Field label="Description">
+            <textarea
+              value={form.description}
+              onChange={update("description")}
+              rows={3}
+              className={`${inputCls} resize-y`}
+              placeholder="Short description shown on the public catalogue…"
+            />
+          </Field>
+
+          <Field label="Product image">
+            <div className="flex flex-wrap items-center gap-4">
+              {currentImage ? (
+                <img
+                  src={currentImage}
+                  alt="preview"
+                  className="h-12 w-12 rounded-lg border border-white/10 object-cover"
+                />
+              ) : (
+                <div className="flex h-12 w-12 items-center justify-center rounded-lg border border-dashed border-white/15 bg-white/5 text-slate-mid">
+                  <ImagePlus size={14} />
+                </div>
+              )}
+              <button
+                type="button"
+                onClick={() => fileRef.current?.click()}
+                className="inline-flex items-center gap-2 rounded-xl border border-dashed border-white/15 bg-white/5 px-4 py-2.5 text-xs font-medium text-slate-light transition-colors hover:border-cyan-neon/40 hover:text-white"
+              >
+                <ImagePlus size={14} />
+                {file || product.image_url ? "Replace image" : "Attach image"}
+              </button>
+              {(product.image_url || file) && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setFile(null);
+                    setPreview(null);
+                    setRemoveImage(true);
+                    if (fileRef.current) fileRef.current.value = "";
+                  }}
+                  className="inline-flex items-center gap-1.5 rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-[11px] font-medium text-slate-light transition-colors hover:border-red-400/30 hover:bg-red-500/10 hover:text-red-300"
+                >
+                  <Trash2 size={12} /> Remove
+                </button>
+              )}
+              <input
+                ref={fileRef}
+                type="file"
+                accept="image/*"
+                onChange={onFile}
+                className="hidden"
+              />
+            </div>
+          </Field>
+
+          {err && (
+            <p className="rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-2 text-xs text-red-300">
+              {err}
+            </p>
+          )}
+
+          <div className="flex items-center justify-end gap-2 pt-2">
+            <button
+              type="button"
+              onClick={onClose}
+              className="rounded-full border border-white/10 bg-white/5 px-4 py-2 text-xs font-medium text-slate-light hover:bg-white/10"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={submitting}
+              className="inline-flex items-center gap-2 rounded-full bg-cyan-neon px-5 py-2 text-xs font-semibold uppercase tracking-[0.18em] text-white transition-all hover:shadow-neon disabled:opacity-60"
+            >
+              {submitting && <Loader2 size={14} className="animate-spin" />}
+              {submitting ? "Saving" : "Save changes"}
+            </button>
+          </div>
+        </form>
+      </motion.div>
+    </motion.div>
   );
 }
