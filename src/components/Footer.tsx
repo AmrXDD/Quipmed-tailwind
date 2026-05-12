@@ -89,7 +89,7 @@ export default function Footer() {
           <p>
             © {new Date().getFullYear()} {c.name}. {c.tagline} | Designed and Developed by{" "}
             <a
-              href="https://covalenstudios.com"
+              href="https://covalenstudios.cloud"
               target="_blank"
               rel="noreferrer"
               className="font-semibold text-mint transition-colors hover:text-cyan-neon"
