@@ -220,18 +220,40 @@ export default function About() {
                   target="_blank"
                   rel="noopener noreferrer"
                   aria-label={`Open ${p.name}'s LinkedIn profile`}
-                  className="leadership-pill group/pill absolute -translate-x-1/2 inline-flex max-w-[44vw] items-center gap-2 rounded-full border px-2.5 py-1.5 backdrop-blur-md md:max-w-[200px]"
+                  className="leadership-pill group/pill absolute -translate-x-1/2 inline-flex items-center rounded-full border backdrop-blur-md gap-0 p-1 md:gap-2 md:px-2.5 md:py-1.5 md:max-w-[200px]"
                   style={{ left: `${p.x}%`, top: `${p.y}%` }}
                 >
                   <span className="leadership-pill-icon grid h-6 w-6 shrink-0 place-items-center rounded-full transition-transform group-hover/pill:scale-110">
                     <Linkedin size={12} strokeWidth={2.6} />
                   </span>
-                  <span className="leadership-pill-text truncate text-[11px] font-semibold leading-tight">
+                  <span className="leadership-pill-text hidden truncate text-[11px] font-semibold leading-tight md:inline">
                     {p.name}
                   </span>
                 </a>
               ))}
             </div>
+
+            {/* Mobile-only name strip — the in-photo pills collapse to icons
+                on small screens, so we surface the names here. */}
+            <ul className="flex flex-wrap items-center gap-2 border-t border-white/10 bg-navy-900/40 p-4 md:hidden">
+              {LEADERSHIP_PEOPLE.map((p) => (
+                <li key={`m-${p.name}`}>
+                  <a
+                    href={p.linkedin}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="leadership-pill inline-flex items-center gap-2 rounded-full border px-2.5 py-1.5"
+                  >
+                    <span className="leadership-pill-icon grid h-5 w-5 shrink-0 place-items-center rounded-full">
+                      <Linkedin size={11} strokeWidth={2.6} />
+                    </span>
+                    <span className="leadership-pill-text text-[11px] font-semibold leading-tight">
+                      {p.name}
+                    </span>
+                  </a>
+                </li>
+              ))}
+            </ul>
 
             {/* Info */}
             <div className="relative p-8 md:p-12">
