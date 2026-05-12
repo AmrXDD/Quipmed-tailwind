@@ -79,8 +79,6 @@ export default function Contact() {
     }
   };
 
-  const SALMIYA = { lat: 29.3375, lng: 48.0758 };
-
   return (
     <div className="min-h-screen bg-navy-900 pb-24 pt-32">
       <div className="mx-auto max-w-7xl px-5 lg:px-8">
@@ -297,9 +295,10 @@ export default function Contact() {
               transition={{ duration: 0.5, delay: 0.2 }}
               className="overflow-hidden rounded-3xl border border-white/5 bg-navy-800/60 shadow-xl aspect-video"
             >
-              {/* Using a cleaner embed URL approach */}
+              {/* QUIP MED — Medical Equipment Supplier */}
               <iframe
-                src={`https://www.google.com/maps/embed?pb=!1m14!1m12!1m3!1d13912.8!2d${SALMIYA.lng}!3d${SALMIYA.lat}!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!5e0!3m2!1sen!2skw!4v1713810000000!5m2!1sen!2skw`}
+                title="QUIP MED location"
+                src="https://www.google.com/maps/embed?pb=!1m13!1m8!1m3!1d3476.6203670780214!2d47.986475!3d29.381403!3m2!1i1024!2i768!4f13.1!3m2!1m1!2zMjnCsDIyJzUzLjEiTiA0N8KwNTknMTEuMyJF!5e0!3m2!1sen!2sus!4v1778574191615!5m2!1sen!2sus"
                 width="100%"
                 height="100%"
                 style={{ border: 0, filter: "grayscale(1) invert(0.9) contrast(1.2) brightness(0.8)" }}

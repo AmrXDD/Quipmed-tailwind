@@ -83,31 +83,18 @@ export default function Products() {
   }, [filter, products, bySlug, brandId]);
 
   // A product's effective sub = its `subcategory` if set, otherwise its `category`.
-  // Admin portal currently fills `category`; this lets the sidebar work without
-  // requiring a manual re-tag of every product.
   const effectiveSub = (p: Product) =>
     (p.subcategory && p.subcategory.trim()) ||
     (p.category && p.category.trim() !== "Uncategorized" ? p.category : null);
 
-  const subcategories = useMemo(() => {
-    if (filter === "all") return [] as string[];
-    const set = new Set<string>();
-    for (const p of inDepartment) {
-      const s = effectiveSub(p);
-      if (s) set.add(s);
-    }
-    return Array.from(set).sort();
-  }, [inDepartment, filter]);
-
   const subsByDept = useMemo(() => {
     const map = new Map<string, string[]>();
-    // Seed with canonical taxonomy so empty departments still show their
-    // expected sub list to admins/customers.
+    // Seed with canonical taxonomy
     for (const d of departments) {
       map.set(d.slug, [...expectedSubcategoriesFor(d.slug, d.name)]);
     }
     map.set(OTHER_SLUG, []);
-    // Merge in subs actually present on products (admin-added).
+    // Merge in subs actually present on products
     for (const p of products) {
       const s = effectiveSub(p);
       if (!s) continue;
@@ -158,7 +145,6 @@ export default function Products() {
   return (
     <div className="min-h-screen bg-navy-900 pb-24 pt-32">
       <div className="mx-auto max-w-[88rem] px-3 sm:px-5 lg:px-6">
-        {/* ── Header ──────────────────────────────────────── */}
         <header className="flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
           <div>
             <span className="inline-flex items-center gap-2 rounded-full border border-cyan-neon/25 bg-cyan-neon/5 px-3 py-1 text-xs font-medium uppercase tracking-[0.2em] text-cyan-soft">
@@ -197,16 +183,13 @@ export default function Products() {
           </div>
         )}
 
-        {/* ── Content: Left Sidebar (Departments + Subcategories) + Grid ── */}
         <div className="mt-10 flex flex-col items-start gap-6 lg:flex-row lg:gap-8">
-          {/* ── LEFT SIDEBAR ─────────────────────────────── */}
           <aside className="relative z-10 w-full shrink-0 self-start lg:w-72">
             <div className="flex flex-col rounded-2xl border border-white/10 bg-navy-800/90 p-3 shadow-[0_4px_30px_rgba(0,0,0,0.25)] backdrop-blur-md">
               <h3 className="mb-3 px-3 pt-1 text-[11px] font-semibold uppercase tracking-[0.22em] text-mint-soft">
                 Departments
               </h3>
               <nav className="space-y-1 pr-1">
-                {/* All */}
                 <button
                   onClick={() => setFilterAndUrl("all")}
                   className={[
@@ -227,7 +210,6 @@ export default function Products() {
                   </span>
                 </button>
 
-                {/* Each department + its subcategories */}
                 {filters
                   .filter((f) => f.key !== "all")
                   .map((f) => {
@@ -255,7 +237,6 @@ export default function Products() {
                           </span>
                         </button>
 
-                        {/* Nested subcategories — visible only when this dept is active */}
                         {isActive && subs.length > 0 && (
                           <ul className="mt-1 ml-2 space-y-0.5 border-l border-white/10 pl-3">
                             <li>
@@ -318,7 +299,6 @@ export default function Products() {
             </div>
           </aside>
 
-          {/* ── PRODUCT GRID ─────────────────────────────── */}
           <div className="min-w-0 flex-1">
             <LayoutGroup id="product-grid">
               <motion.div
@@ -347,7 +327,6 @@ export default function Products() {
                       style={{ transformStyle: "preserve-3d", perspective: 1200 }}
                       className="group relative overflow-hidden rounded-2xl border border-white/5 bg-navy-800/80 p-6 text-left transition-colors hover:border-cyan-neon/30"
                     >
-                      {/* image */}
                       <div className="mb-5 flex h-40 items-center justify-center overflow-hidden rounded-xl bg-white">
                         {(() => {
                           const src = productImageFor(p.slug, p.image_url);
@@ -364,7 +343,6 @@ export default function Products() {
                           );
                         })()}
                       </div>
-                      {/* tag */}
                       <div className="flex items-start justify-between gap-3">
                         <motion.span
                           layoutId={`cat-${p.id}`}
@@ -418,7 +396,6 @@ export default function Products() {
         </div>
       </div>
 
-      {/* ── Detail modal (layoutId shared with cards) ──── */}
       <AnimatePresence>
         {active && <ProductDetail product={active} onClose={() => setActive(null)} />}
       </AnimatePresence>

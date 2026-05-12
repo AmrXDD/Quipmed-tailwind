@@ -211,7 +211,7 @@ export default function Home() {
                 </filter>
               </defs>
             </svg>
-            <div className="relative h-[min(60vh,460px)] w-[min(46vh,360px)]">
+            <div className="relative h-[min(58vh,440px)] w-[min(42vh,340px)]">
               <video
                 src="/ct-scan.mp4"
                 autoPlay
@@ -220,7 +220,7 @@ export default function Home() {
                 playsInline
                 preload="auto"
                 aria-hidden="true"
-                className="h-full w-full rounded-3xl object-cover"
+                className="h-full w-full rounded-3xl object-contain"
                 style={{
                   background: "transparent",
                   filter: "url(#ctscan-chromakey) contrast(1.05) brightness(1.05)",
@@ -413,34 +413,55 @@ export default function Home() {
                 n: "01",
                 k: "Reliable",
                 d: "Time-tested equipment, validated supply chains, and certified partners across 14 countries.",
+                Icon: ShieldCheck,
+                gradient: "from-cyan-500/20 via-blue-500/10 to-transparent",
               },
               {
                 n: "02",
                 k: "Modern",
                 d: "From 4K endoscopy to immersive VR therapy — the latest technologies carefully curated for Kuwaiti healthcare.",
+                Icon: Sparkles,
+                gradient: "from-mint/20 via-cyan-neon/10 to-transparent",
               },
               {
                 n: "03",
                 k: "Strong",
                 d: "Backed by long-term brand relationships with Neusoft, Allengers, Tuttnauer, EMS Swiss and more.",
+                Icon: Activity,
+                gradient: "from-violet-500/20 via-fuchsia-500/10 to-transparent",
               },
-            ].map((v) => (
+            ].map((v, i) => (
               <motion.article
                 key={v.n}
                 initial={{ opacity: 0, y: 24 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true, margin: "-10%" }}
-                transition={{ duration: 0.5, ease: [0.2, 0.7, 0.2, 1] }}
-                className="group relative overflow-hidden rounded-2xl border border-white/5 bg-navy-800/60 p-7 transition-all hover:border-cyan-neon/30"
+                transition={{
+                  duration: 0.5,
+                  delay: (i % 3) * 0.08,
+                  ease: [0.2, 0.7, 0.2, 1],
+                }}
+                whileHover={{ y: -4 }}
+                className="solution-card group relative flex flex-col overflow-hidden rounded-3xl border border-white/10 bg-navy-800/70 p-7 shadow-[0_4px_30px_rgba(0,0,0,0.25)] transition-all hover:border-mint-soft/50 hover:bg-navy-800"
               >
-                <span className="text-xs font-semibold tracking-[0.22em] text-mint">
-                  {v.n}
-                </span>
-                <h3 className="mt-2 text-2xl font-bold text-primary">{v.k}</h3>
-                <p className="mt-3 text-sm leading-relaxed text-slate-mid">
+                <div
+                  aria-hidden="true"
+                  className={`pointer-events-none absolute inset-0 bg-gradient-to-br ${v.gradient} opacity-60`}
+                />
+                <div className="relative flex items-start justify-between">
+                  <span className="grid h-14 w-14 place-items-center rounded-2xl bg-white text-navy-900 ring-1 ring-mint-soft/50 transition-transform group-hover:scale-110">
+                    <v.Icon size={24} strokeWidth={2.2} />
+                  </span>
+                  <span className="rounded-full border border-white/20 bg-white/10 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-white">
+                    {v.n}
+                  </span>
+                </div>
+                <h3 className="relative mt-6 text-xl font-bold leading-tight text-white">
+                  {v.k}
+                </h3>
+                <p className="relative mt-2 text-sm text-white/70">
                   {v.d}
                 </p>
-                <div className="absolute -bottom-20 -right-20 h-48 w-48 rounded-full bg-cyan-neon/10 opacity-0 blur-3xl transition-opacity group-hover:opacity-100" />
               </motion.article>
             ))}
           </div>
