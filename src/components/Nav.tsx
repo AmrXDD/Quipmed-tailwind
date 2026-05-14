@@ -129,10 +129,10 @@ export default function Nav({
                     exit={{ opacity: 0, y: -6, scale: 0.98 }}
                     transition={{ duration: 0.18 }}
                     className={[
-                      "absolute left-0 top-full mt-2 max-h-[70vh] w-[22rem] overflow-y-auto rounded-2xl border p-2 shadow-pill backdrop-blur-xl",
+                      "absolute left-0 top-full mt-2 max-h-[70vh] w-[22rem] overflow-y-auto rounded-2xl border p-2 shadow-pill",
                       scrolled || theme === "light"
-                        ? "border-black/10 bg-white/95"
-                        : "border-white/10 bg-black/90",
+                        ? "border-black/15 bg-white"
+                        : "border-white/10 bg-black/90 backdrop-blur-xl",
                     ].join(" ")}
                     role="menu"
                   >
