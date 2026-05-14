@@ -375,7 +375,14 @@ export default function Nav({
             transition={{ duration: 0.25, ease: [0.2, 0.7, 0.2, 1] }}
             className="pointer-events-none mt-3 flex justify-center px-4 md:hidden"
           >
-            <ul className="pointer-events-auto flex w-full max-w-sm flex-col gap-1 rounded-3xl border border-white/10 bg-black/90 p-3 shadow-pill backdrop-blur-xl">
+            <ul
+              className={[
+                "pointer-events-auto flex w-full max-w-sm flex-col gap-1 rounded-3xl border p-3 shadow-pill",
+                theme === "light"
+                  ? "border-black/15 bg-white"
+                  : "border-white/10 bg-black/90 backdrop-blur-xl",
+              ].join(" ")}
+            >
               {links.map((l) => (
                 <li key={l.to}>
                   <NavLink
