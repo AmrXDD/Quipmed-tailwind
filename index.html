@@ -103,6 +103,63 @@
       }
     </style>
     <script>
+      /* Click inspector — only with ?debug=clicks in the address.
+         Outlines whatever is under the cursor, names it, and reports what
+         each click actually landed on. Invisible to normal visitors. */
+      (function () {
+        if (location.search.indexOf("debug=clicks") === -1) return;
+        var box, panel, last = "none yet";
+        var build = "";
+        function describe(el) {
+          if (!el) return "nothing";
+          var s = el.tagName.toLowerCase();
+          if (el.id) s += "#" + el.id;
+          var c = (el.getAttribute("class") || "").trim().split(/\s+/).slice(0, 5).join(".");
+          if (c) s += "." + c;
+          var a = el.closest && el.closest("a,button");
+          s += a ? "\n    inside " + a.tagName.toLowerCase() + ": " + (a.getAttribute("href") || a.textContent.trim().slice(0, 40)) : "\n    (not inside a link or button)";
+          return s;
+        }
+        function ensure() {
+          if (box) return;
+          box = document.createElement("div");
+          box.style.cssText = "position:fixed;pointer-events:none;z-index:2147483647;outline:2px solid #ff3b30;background:rgba(255,59,48,.10)";
+          panel = document.createElement("pre");
+          panel.style.cssText = "position:fixed;left:10px;bottom:10px;z-index:2147483647;pointer-events:none;margin:0;max-width:min(680px,92vw);white-space:pre-wrap;font:12px/1.45 ui-monospace,monospace;background:#000;color:#7CFC00;padding:10px 12px;border-radius:8px;box-shadow:0 0 0 1px #333";
+          document.documentElement.append(box, panel);
+          var s = [].slice.call(document.scripts).map(function (x) { return x.src; }).filter(function (x) { return x.indexOf("/assets/") > -1; })[0] || "";
+          build = s.split("/").pop();
+        }
+        function render(under) {
+          panel.textContent =
+            "QUIPMED CLICK INSPECTOR  ·  " + location.host + location.pathname + "  ·  " + build +
+            "\nUNDER CURSOR: " + under +
+            "\nLAST CLICK:   " + last +
+            "\nUA: " + navigator.userAgent.slice(0, 120);
+        }
+        document.addEventListener("pointermove", function (e) {
+          ensure();
+          var el = document.elementFromPoint(e.clientX, e.clientY);
+          if (!el) return;
+          var r = el.getBoundingClientRect();
+          box.style.left = r.left + "px"; box.style.top = r.top + "px";
+          box.style.width = r.width + "px"; box.style.height = r.height + "px";
+          render(describe(el));
+        }, true);
+        ["pointerdown", "mousedown", "click"].forEach(function (type) {
+          window.addEventListener(type, function (e) {
+            ensure();
+            last = type + " -> " + describe(e.target).replace(/\n\s+/g, "  |  ") + "  (button=" + e.button + ", pointer=" + (e.pointerType || "-") + ")";
+            render("(move the mouse)");
+          }, true);
+        });
+        window.addEventListener("click", function (e) {
+          last += "  [cancelled by page: " + e.defaultPrevented + "]";
+          if (panel) render("(move the mouse)");
+        }, false);
+      })();
+    </script>
+    <script>
       /* One canonical address. www.quipmed.co and quipmed.co are separate
          origins (separate logins and storage), so send www to the bare
          domain. "_w" breaks any loop if the host ever redirects back. */

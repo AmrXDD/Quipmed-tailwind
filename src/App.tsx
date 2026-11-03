@@ -216,6 +216,8 @@ export default function App() {
         {!isAdminPath && <CartDrawer />}
 
 
+        {!isAdminPath && <div className="grain" aria-hidden="true" />}
+
         <main id="main" key={location.pathname} className="min-h-screen bg-navy-900">
           {routes}
         </main>
