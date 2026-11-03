@@ -129,8 +129,8 @@ const PRESETS: Record<string, Preset> = {
 
 const DONE = "revealBound";
 
-function bindReveal(el: HTMLElement) {
-  if (el.dataset[DONE]) return;
+function bindReveal(el: HTMLElement): boolean {
+  if (el.dataset[DONE]) return false;
   el.dataset[DONE] = "1";
   const preset = PRESETS[el.dataset.reveal ?? "up"] ?? PRESETS.up;
   const delay = parseFloat(el.dataset.revealDelay ?? "0") || 0;
@@ -149,10 +149,11 @@ function bindReveal(el: HTMLElement) {
         clearProps: isClip ? "clipPath" : "transform",
       }),
   });
+  return true;
 }
 
-function bindParallax(el: HTMLElement) {
-  if (el.dataset.parallaxBound) return;
+function bindParallax(el: HTMLElement): boolean {
+  if (el.dataset.parallaxBound) return false;
   el.dataset.parallaxBound = "1";
   const x = parseFloat(el.dataset.parallaxX ?? "0");
   const y = parseFloat(el.dataset.parallaxY ?? "0");
@@ -172,25 +173,47 @@ function bindParallax(el: HTMLElement) {
       },
     },
   );
+  return true;
 }
 
-function scan(root: ParentNode) {
-  root.querySelectorAll<HTMLElement>("[data-reveal]").forEach(bindReveal);
+/** Bind any new animated elements under root; returns how many were new. */
+function scan(root: ParentNode): number {
+  let bound = 0;
+  root.querySelectorAll<HTMLElement>("[data-reveal]").forEach((el) => {
+    if (bindReveal(el)) bound++;
+  });
   root
     .querySelectorAll<HTMLElement>("[data-parallax-x],[data-parallax-y]")
-    .forEach(bindParallax);
+    .forEach((el) => {
+      if (bindParallax(el)) bound++;
+    });
+  return bound;
 }
 
 let observer: MutationObserver | null = null;
-let refreshQueued = false;
+let resizeObs: ResizeObserver | null = null;
+let refreshTimer = 0;
+let lastRefresh = 0;
 
+/**
+ * Debounced, rate-limited ScrollTrigger.refresh().
+ *
+ * Every refresh writes history.scrollRestoration and briefly inserts a
+ * measuring element into <body>. Refreshing in response to *any* DOM
+ * insertion therefore fed itself — a refresh every frame — and Firefox
+ * rate-limits the History API (~200 calls / 10s), after which it refuses
+ * pushState and every link on the site goes dead. So: only refresh when
+ * new animated content was actually bound or the page height changed,
+ * debounced, and never more than twice a second.
+ */
 function queueRefresh() {
-  if (refreshQueued) return;
-  refreshQueued = true;
-  requestAnimationFrame(() => {
-    refreshQueued = false;
+  if (refreshTimer) return;
+  const wait = Math.max(150, 500 - (performance.now() - lastRefresh));
+  refreshTimer = window.setTimeout(() => {
+    refreshTimer = 0;
+    lastRefresh = performance.now();
     ScrollTrigger.refresh();
-  });
+  }, wait);
 }
 
 export function startReveals() {
@@ -198,26 +221,40 @@ export function startReveals() {
   if (prefersReducedMotion()) return;
   scan(document);
   observer = new MutationObserver((records) => {
-    let added = false;
+    let bound = 0;
     for (const r of records) {
       r.addedNodes.forEach((n) => {
-        if (n.nodeType !== 1) return;
+        if (n.nodeType !== 1 || !(n as Element).isConnected) return;
         const el = n as HTMLElement;
-        if (el.matches?.("[data-reveal]")) bindReveal(el);
-        if (el.matches?.("[data-parallax-x],[data-parallax-y]")) bindParallax(el);
-        scan(el);
-        added = true;
+        if (el.matches?.("[data-reveal]") && bindReveal(el)) bound++;
+        if (el.matches?.("[data-parallax-x],[data-parallax-y]") && bindParallax(el)) bound++;
+        bound += scan(el);
       });
     }
-    if (added) queueRefresh();
+    // Only new animated content warrants a refresh (see queueRefresh).
+    if (bound > 0) queueRefresh();
   });
   observer.observe(document.body, { childList: true, subtree: true });
+
+  // Content that loads later (images, data) shifts trigger positions:
+  // refresh when the page's height actually changes.
+  let lastHeight = 0;
+  resizeObs = new ResizeObserver(() => {
+    const h = document.documentElement.scrollHeight;
+    if (Math.abs(h - lastHeight) > 40) {
+      lastHeight = h;
+      queueRefresh();
+    }
+  });
+  resizeObs.observe(document.body);
 }
 
 /** Admin: stop watching the DOM and drop every scroll animation. */
 export function stopReveals() {
   observer?.disconnect();
   observer = null;
+  resizeObs?.disconnect();
+  resizeObs = null;
   ScrollTrigger.getAll().forEach((t) => t.kill());
 }
 
