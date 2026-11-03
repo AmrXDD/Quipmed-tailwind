@@ -24,7 +24,7 @@
       html[data-preloading] [data-nav-logo] { opacity: 0; }
       #preloader {
         --pl-bg: #0b0c0b;
-        --pl-ink: #f4f5f2;
+        --pl-ink: #ffffff;
         --pl-muted: rgba(244, 245, 242, 0.42);
         --pl-ghost: rgba(244, 245, 242, 0.1);
         --pl-scan: #8fd4a6;
@@ -35,7 +35,7 @@
       }
       html.theme-white #preloader {
         --pl-bg: #fafaf8;
-        --pl-ink: #0b0c0b;
+        --pl-ink: #050708;
         --pl-muted: rgba(11, 12, 11, 0.5);
         --pl-ghost: rgba(11, 12, 11, 0.08);
         --pl-scan: #1f7a45;
@@ -184,11 +184,18 @@
             window.dispatchEvent(new Event("quipmed:preloader-leave"));
           }, reduce ? 0 : 260);
 
+          // Hand-off: the flight ends at ~1.21s. Show the real nav logo
+          // (no fade, same spot, same colour), then remove the flying copy
+          // two frames later so there is never a frame with no logo.
           setTimeout(function () {
             d.removeAttribute("data-preloading");
-            window.dispatchEvent(new Event("quipmed:preloader-done"));
-            root.remove();
-          }, reduce ? 450 : 1300);
+            requestAnimationFrame(function () {
+              requestAnimationFrame(function () {
+                root.remove();
+                window.dispatchEvent(new Event("quipmed:preloader-done"));
+              });
+            });
+          }, reduce ? 450 : 1280);
         }
 
         // Pin the logo to absolute pixel coordinates before flying so the

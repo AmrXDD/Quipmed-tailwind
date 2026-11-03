@@ -1,4 +1,4 @@
-import { Suspense, useEffect, useMemo, useRef, useState } from "react";
+import { Component, Suspense, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { Canvas, useFrame, useLoader, useThree } from "@react-three/fiber";
 import * as THREE from "three";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
@@ -343,6 +343,27 @@ function useWebGL() {
   }, []);
 }
 
+/**
+ * If the model or the GPU fails on a device, show the fallback instead of
+ * letting the error unmount the whole app (nav included).
+ */
+class SceneBoundary extends Component<
+  { fallback: ReactNode; onError: () => void; children: ReactNode },
+  { failed: boolean }
+> {
+  state = { failed: false };
+  static getDerivedStateFromError() {
+    return { failed: true };
+  }
+  componentDidCatch(error: unknown) {
+    console.warn("[BrainScan] 3D scene failed, showing fallback:", error);
+    this.props.onError();
+  }
+  render() {
+    return this.state.failed ? this.props.fallback : this.props.children;
+  }
+}
+
 export default function BrainScan({
   theme,
   onReady,
@@ -384,6 +405,7 @@ export default function BrainScan({
   return (
     <div ref={wrap} className={className}>
       {available === "yes" && (
+        <SceneBoundary fallback={fallback} onError={onReady}>
         <Canvas
           dpr={[1, window.innerWidth < 768 ? 1.5 : 1.75]}
           frameloop={visible ? "always" : "never"}
@@ -401,6 +423,7 @@ export default function BrainScan({
             />
           </Suspense>
         </Canvas>
+        </SceneBoundary>
       )}
     </div>
   );

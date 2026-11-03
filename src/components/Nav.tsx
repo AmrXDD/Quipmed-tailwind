@@ -92,7 +92,7 @@ export default function Nav({
             aria-label="QuipMed home"
             data-nav-logo
             className={[
-              "ml-1 mr-2 flex h-9 items-center rounded-full px-3 transition-[color,opacity] duration-300",
+              "ml-1 mr-2 flex h-9 items-center rounded-full px-3 transition-colors",
               scrolled || theme === "light" ? "text-black" : "text-white",
             ].join(" ")}
           >
