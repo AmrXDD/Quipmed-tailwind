@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useLocation } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -14,6 +14,8 @@ import {
   Linkedin,
 } from "lucide-react";
 import { supabase, HAS_SUPABASE } from "@/lib/supabaseClient";
+import ConsentGate from "@/components/ConsentGate";
+import { PageHeader } from "@/components/ui/primitives";
 import { useCompanyInfo } from "@/hooks/useSupabase";
 import type { InquiryInput } from "@/lib/types";
 
@@ -80,21 +82,13 @@ export default function Contact() {
   };
 
   return (
-    <div className="min-h-screen bg-navy-900 pb-24 pt-32">
-      <div className="mx-auto max-w-7xl px-5 lg:px-8">
-        <header className="max-w-3xl">
-          <span className="inline-flex items-center gap-2 rounded-full border border-cyan-neon/25 bg-cyan-neon/5 px-3 py-1 text-xs font-medium uppercase tracking-[0.2em] text-cyan-soft">
-            <Send size={12} /> Get in touch
-          </span>
-          <h1 className="mt-5 text-[clamp(2rem,4.5vw,4rem)] font-bold leading-[0.98] tracking-tight text-white">
-            Let’s build better healthcare, together.
-          </h1>
-          <p className="mt-4 text-slate-mid">
-            Reach out for product demonstrations, procurement enquiries,
-            partnership opportunities, or technical support — we reply within
-            one business day.
-          </p>
-        </header>
+    <div className="min-h-screen bg-navy-900 pb-28 pt-36">
+      <div className="mx-auto max-w-[90rem] px-5 sm:px-8 lg:px-12">
+        <PageHeader
+          eyebrow="Contact"
+          title="Let’s build better healthcare, together."
+          lead="Product demonstrations, procurement enquiries, partnerships or technical support. We reply within one business day."
+        />
 
         <div className="mt-12 grid gap-8 lg:grid-cols-[1.2fr_1fr]">
           <motion.form
@@ -102,9 +96,9 @@ export default function Contact() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5 }}
             onSubmit={handleSubmit(onSubmit)}
-            className="relative rounded-3xl border border-white/5 bg-navy-800/60 p-6 md:p-8"
+            className="relative rounded-[20px] border border-line bg-surface p-6 md:p-10"
           >
-            <h2 className="text-xl font-bold text-white">Send an enquiry</h2>
+            <h2 className="text-2xl font-semibold tracking-tight text-primary">Send an enquiry</h2>
             <p className="mt-1 text-sm text-slate-mid">
               All fields marked with * are required.
             </p>
@@ -119,7 +113,7 @@ export default function Contact() {
                   id="full_name"
                   {...register("full_name", { required: "Your name is required" })}
                   className={inputCls}
-                  placeholder="Dr. Jane Smith"
+                  placeholder="Dr. Noura Al-Mutairi"
                 />
               </Field>
               <Field
@@ -157,7 +151,7 @@ export default function Contact() {
                   id="company"
                   {...register("company")}
                   className={inputCls}
-                  placeholder="Al-Sabah Hospital"
+                  placeholder="Hospital or clinic name"
                 />
               </Field>
               <div className="sm:col-span-2">
@@ -166,7 +160,7 @@ export default function Contact() {
                     id="related_product"
                     {...register("related_product")}
                     className={inputCls}
-                    placeholder="e.g. Portable Ultrasound X3 (optional)"
+                    placeholder="Optional"
                   />
                 </Field>
               </div>
@@ -204,7 +198,7 @@ export default function Contact() {
               <button
                 type="submit"
                 disabled={status === "submitting"}
-                className="inline-flex items-center gap-2 rounded-full bg-cyan-neon px-6 py-3 text-sm font-semibold text-navy-900 transition-all hover:shadow-neon disabled:opacity-60"
+                className="inline-flex items-center gap-2 rounded-full bg-primary px-6 py-3 text-sm font-semibold text-[var(--bg-primary)] transition-colors hover:bg-mint-soft hover:text-white active:scale-[0.98] disabled:opacity-60"
               >
                 {status === "submitting" ? (
                   <>
@@ -224,9 +218,9 @@ export default function Contact() {
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0 }}
                     role="status"
-                    className="inline-flex items-center gap-2 text-sm text-mint"
+                    className="inline-flex items-center gap-2 text-sm text-scan"
                   >
-                    <CheckCircle2 size={16} /> Thanks — we’ll be in touch shortly.
+                    <CheckCircle2 size={16} /> Thank you. We&rsquo;ll reply within one business day.
                   </motion.p>
                 )}
                 {status === "error" && (
@@ -243,6 +237,15 @@ export default function Contact() {
                 )}
               </AnimatePresence>
             </div>
+
+            <p className="mt-6 max-w-[62ch] border-t border-line pt-5 text-[13px] leading-relaxed text-slate-mid">
+              We use these details only to answer your enquiry. Please don&rsquo;t include patient
+              information. See our{" "}
+              <Link to="/privacy" className="text-primary underline decoration-line-strong underline-offset-4 hover:decoration-scan">
+                privacy policy
+              </Link>{" "}
+              for how we handle and store it.
+            </p>
           </motion.form>
 
           <div className="flex flex-col gap-5">
@@ -250,10 +253,9 @@ export default function Contact() {
               initial={{ opacity: 0, y: 12 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5, delay: 0.1 }}
-              className="relative overflow-hidden rounded-3xl border border-white/5 bg-navy-800/60 p-6"
-              style={{ backgroundImage: "radial-gradient(circle at 1px 1px, rgba(34,211,238,0.05) 1px, transparent 0)", backgroundSize: "24px 24px" }}
+              className="relative overflow-hidden rounded-[20px] border border-line bg-surface p-6 md:p-8"
             >
-              <h2 className="text-xl font-bold text-white">Headquarters</h2>
+              <h2 className="text-2xl font-semibold tracking-tight text-primary">Headquarters</h2>
               <p className="mt-1 text-sm text-slate-mid">{c.name_ar}</p>
               <dl className="mt-6 space-y-5 text-sm">
                 <InfoRow icon={<Mail size={15} />} label="Email">
@@ -293,9 +295,14 @@ export default function Contact() {
               initial={{ opacity: 0, y: 12 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5, delay: 0.2 }}
-              className="overflow-hidden rounded-3xl border border-white/5 bg-navy-800/60 shadow-xl aspect-video"
+              className="aspect-video overflow-hidden rounded-[20px] border border-line"
             >
-              {/* QUIP MED — Medical Equipment Supplier */}
+              {/* Google Maps sets its own cookies — load only with consent. */}
+              <ConsentGate
+                provider="Google Maps"
+                externalHref="https://www.google.com/maps/search/?api=1&query=29.381403,47.986475"
+                externalLabel="Open in Google Maps"
+              >
               <iframe
                 title="QUIP MED location"
                 src="https://www.google.com/maps/embed?pb=!1m13!1m8!1m3!1d3476.6203670780214!2d47.986475!3d29.381403!3m2!1i1024!2i768!4f13.1!3m2!1m1!2zMjnCsDIyJzUzLjEiTiA0N8KwNTknMTEuMyJF!5e0!3m2!1sen!2sus!4v1778574191615!5m2!1sen!2sus"
@@ -304,8 +311,9 @@ export default function Contact() {
                 style={{ border: 0, filter: "grayscale(1) invert(0.9) contrast(1.2) brightness(0.8)" }}
                 allowFullScreen
                 loading="lazy"
-                referrerPolicy="no-referrer-when-downgrade"
+                referrerPolicy="strict-origin-when-cross-origin"
               ></iframe>
+              </ConsentGate>
             </motion.div>
           </div>
         </div>
@@ -315,7 +323,7 @@ export default function Contact() {
 }
 
 const inputCls =
-  "block w-full rounded-xl border border-white/10 bg-navy-900/40 px-4 py-3 text-sm text-white placeholder:text-slate-mid/40 outline-none transition-all focus:border-cyan-neon/60 focus:ring-2 focus:ring-cyan-neon/10";
+  "block w-full rounded-xl border border-line-strong bg-transparent px-4 py-3 text-[15px] text-primary placeholder:text-slate-mid/50 outline-none transition-[border-color,box-shadow] duration-300 focus:border-scan focus:ring-4 focus:ring-[color-mix(in_srgb,var(--scan)_15%,transparent)]";
 
 function Field({
   label,
@@ -330,7 +338,7 @@ function Field({
 }) {
   return (
     <div className="block">
-      <label htmlFor={htmlFor} className="mb-1.5 block text-xs font-semibold uppercase tracking-[0.18em] text-slate-mid">
+      <label htmlFor={htmlFor} className="mb-2 block font-mono text-[10.5px] font-medium uppercase tracking-[0.14em] text-slate-mid">
         {label}
       </label>
       {children}
@@ -354,11 +362,11 @@ function InfoRow({
 }) {
   return (
     <div className="flex items-start gap-3">
-      <span className="mt-0.5 grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-cyan-neon/10 text-cyan-neon ring-1 ring-cyan-neon/20">
+      <span className="mt-0.5 grid h-8 w-8 shrink-0 place-items-center rounded-lg border border-line-strong text-scan">
         {icon}
       </span>
       <div>
-        <dt className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-mid">
+        <dt className="font-mono text-[10.5px] font-medium uppercase tracking-[0.14em] text-slate-mid">
           {label}
         </dt>
         <dd className="mt-0.5 text-sm leading-relaxed text-white">{children}</dd>

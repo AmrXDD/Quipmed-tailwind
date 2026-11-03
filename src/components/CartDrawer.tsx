@@ -1,11 +1,24 @@
 import { AnimatePresence, motion } from "framer-motion";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { Minus, Plus, ShoppingBag, Trash2, X } from "lucide-react";
 import { useCart } from "@/lib/cart";
 
 export default function CartDrawer() {
   const { items, isOpen, closeCart, removeItem, setQuantity, subtotal, clear } =
     useCart();
+  const navigate = useNavigate();
+
+  // No online payment: the list becomes a quotation request.
+  const requestQuote = () => {
+    const lines = items.map((it) => `• ${it.name} × ${it.quantity}`).join("\n");
+    closeCart();
+    navigate("/contact", {
+      state: {
+        product: items.length === 1 ? items[0].name : `${items.length} products`,
+        message: `I would like a quotation for the following items:\n${lines}`,
+      },
+    });
+  };
 
   return (
     <AnimatePresence>
@@ -127,8 +140,9 @@ export default function CartDrawer() {
                     ${subtotal.toLocaleString()}
                   </span>
                 </div>
-                <p className="mt-1 text-[11px] text-slate-mid">
-                  Taxes and shipping calculated at checkout.
+                <p className="mt-1 text-[11px] leading-relaxed text-slate-mid">
+                  Indicative prices only. Excludes taxes, delivery and installation. Your
+                  final price is confirmed in a written quotation.
                 </p>
                 <div className="mt-4 flex gap-2">
                   <button
@@ -137,8 +151,12 @@ export default function CartDrawer() {
                   >
                     Clear
                   </button>
-                  <button className="flex-[2] rounded-full bg-cyan-neon py-2.5 text-xs font-semibold uppercase tracking-[0.18em] text-navy-900 hover:shadow-neon">
-                    Checkout
+                  <button
+                    type="button"
+                    onClick={requestQuote}
+                    className="flex-[2] rounded-full bg-primary py-2.5 text-xs font-semibold uppercase tracking-[0.14em] text-[var(--bg-primary)] transition-colors hover:bg-mint-soft hover:text-white"
+                  >
+                    Request quotation
                   </button>
                 </div>
               </footer>
