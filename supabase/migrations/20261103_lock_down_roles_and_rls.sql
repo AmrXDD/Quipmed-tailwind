@@ -5,39 +5,22 @@
 -- edit the catalogue:
 --   1. handle_new_user() trusted the `role` sent in sign-up metadata,
 --      which the caller controls. New accounts now always start as 'User'.
---   2. "self update profile" let any signed-in user change their own
---      `role`. Role and department changes now require an admin
---      (or the service role / SQL editor).
+--   2. Any signed-in user could change their own `role`. Role and
+--      department changes now require an admin (or the service role /
+--      SQL editor).
 --   3. Inquiries and catalogue writes were open to ANY authenticated
 --      user. They now require a staff role.
 --
--- Idempotent. Run in Supabase SQL editor or with `supabase db push`.
+-- Written defensively because the live database differs from
+-- schema.sql: tables that don't exist are skipped, and ALL existing
+-- policies on the secured tables are replaced (Postgres ORs permissive
+-- policies together, so one leftover "authenticated can do anything"
+-- policy would silently undo this).
+--
+-- Idempotent. Run the whole file in the Supabase SQL editor.
 -- ─────────────────────────────────────────────────────────────────
 
--- 1. New users never pick their own role ─────────────────────────
-create or replace function public.handle_new_user()
-returns trigger
-language plpgsql
-security definer
-set search_path = public
-as $$
-begin
-  insert into public.profiles (id, email, full_name, role, department)
-  values (
-    new.id,
-    new.email,
-    coalesce(new.raw_user_meta_data->>'full_name', ''),
-    'User',
-    null
-  )
-  on conflict (id) do update
-    set email     = excluded.email,
-        full_name = coalesce(nullif(excluded.full_name, ''), public.profiles.full_name);
-  return new;
-end;
-$$;
-
--- 2. Role helpers ─────────────────────────────────────────────────
+-- 1. Role helpers ─────────────────────────────────────────────────
 create or replace function public.is_admin()
 returns boolean
 language sql
@@ -71,20 +54,52 @@ as $$
   );
 $$;
 
--- 3. Block self-promotion ─────────────────────────────────────────
--- API callers (anon / authenticated) may only change role or
--- department if they are an admin. The service role (edge functions)
--- and the SQL editor (postgres) are not restricted.
-create or replace function public.guard_profile_privileges()
+-- 2. New users never pick their own role ─────────────────────────
+create or replace function public.handle_new_user()
 returns trigger
 language plpgsql
 security definer
 set search_path = public
 as $$
 begin
+  insert into public.profiles (id, email, full_name, role)
+  values (
+    new.id,
+    new.email,
+    coalesce(new.raw_user_meta_data->>'full_name', ''),
+    'User'
+  )
+  on conflict (id) do update
+    set email = excluded.email;
+  return new;
+end;
+$$;
+
+drop trigger if exists on_auth_user_created on auth.users;
+create trigger on_auth_user_created
+  after insert on auth.users
+  for each row execute function public.handle_new_user();
+
+-- 3. Block self-promotion ─────────────────────────────────────────
+-- API callers (anon / authenticated) may only change role or
+-- department if they are an admin. The service role (edge functions)
+-- and the SQL editor (postgres) are not restricted. Uses jsonb so it
+-- works whether or not the department column exists.
+-- MUST be security invoker: under security definer, current_user would
+-- be the function owner and the check would never fire.
+create or replace function public.guard_profile_privileges()
+returns trigger
+language plpgsql
+security invoker
+set search_path = public
+as $$
+declare
+  n jsonb := to_jsonb(new);
+  o jsonb := to_jsonb(old);
+begin
   if current_user in ('anon', 'authenticated')
-     and (new.role is distinct from old.role
-          or new.department is distinct from old.department)
+     and (n->'role' is distinct from o->'role'
+          or n->'department' is distinct from o->'department')
      and not public.is_admin()
   then
     raise exception 'Only an admin can change role or department'
@@ -99,60 +114,73 @@ create trigger guard_profile_privileges
   before update on public.profiles
   for each row execute function public.guard_profile_privileges();
 
--- 4. Inquiries: staff only ────────────────────────────────────────
-drop policy if exists "auth read inquiries"   on public.inquiries;
-drop policy if exists "auth update inquiries" on public.inquiries;
-drop policy if exists "staff read inquiries"   on public.inquiries;
-drop policy if exists "staff update inquiries" on public.inquiries;
-
-create policy "staff read inquiries"
-  on public.inquiries for select using (public.is_staff());
-create policy "staff update inquiries"
-  on public.inquiries for update using (public.is_staff())
-  with check (public.is_staff());
-
--- Public insert stays (the contact form needs it).
-
--- 5. Catalogue and company info: admins only ──────────────────────
-drop policy if exists "auth write brands"        on public.brands;
-drop policy if exists "auth write products"      on public.products;
-drop policy if exists "auth write company_info"  on public.company_info;
-drop policy if exists "auth write departments"   on public.departments;
-drop policy if exists "admin write brands"       on public.brands;
-drop policy if exists "admin write products"     on public.products;
-drop policy if exists "admin write company_info" on public.company_info;
-drop policy if exists "admin write departments"  on public.departments;
-
-create policy "admin write brands"
-  on public.brands for all using (public.is_admin())
-  with check (public.is_admin());
-create policy "admin write products"
-  on public.products for all using (public.is_admin())
-  with check (public.is_admin());
-create policy "admin write company_info"
-  on public.company_info for all using (public.is_admin())
-  with check (public.is_admin());
-create policy "admin write departments"
-  on public.departments for all using (public.is_admin())
-  with check (public.is_admin());
-
--- Legacy table, if it still exists under the old name.
+-- 4. Replace every policy on the secured tables with a known set ──
 do $$
+declare
+  r record;
+  t text;
+  catalogue text[] := array['brands', 'products', 'departments', 'collections', 'company_info'];
+  secured   text[] := catalogue || array['inquiries', 'profiles'];
 begin
-  if exists (
-    select 1 from information_schema.tables
-     where table_schema = 'public' and table_name = 'collections'
-  ) then
-    execute 'drop policy if exists "auth write collections" on public.collections';
-    execute 'drop policy if exists "admin write collections" on public.collections';
-    execute 'create policy "admin write collections" on public.collections
-               for all using (public.is_admin()) with check (public.is_admin())';
+  -- 4a. Drop all existing policies on these tables.
+  for r in
+    select tablename, policyname
+      from pg_policies
+     where schemaname = 'public'
+       and tablename = any (secured)
+  loop
+    execute format('drop policy %I on public.%I', r.policyname, r.tablename);
+  end loop;
+
+  -- 4b. Catalogue: anyone can read, only Dev/Admin can write.
+  foreach t in array catalogue loop
+    if to_regclass('public.' || t) is not null then
+      execute format('alter table public.%I enable row level security', t);
+      execute format('create policy "public read %s" on public.%I for select using (true)', t, t);
+      execute format(
+        'create policy "admin write %s" on public.%I for all
+           using (public.is_admin()) with check (public.is_admin())', t, t);
+    end if;
+  end loop;
+
+  -- 4c. Inquiries: the contact form can insert; only staff can read or update.
+  if to_regclass('public.inquiries') is not null then
+    alter table public.inquiries enable row level security;
+    create policy "public insert inquiries" on public.inquiries
+      for insert with check (true);
+    create policy "staff read inquiries" on public.inquiries
+      for select using (public.is_staff());
+    create policy "staff update inquiries" on public.inquiries
+      for update using (public.is_staff()) with check (public.is_staff());
+    create policy "admin delete inquiries" on public.inquiries
+      for delete using (public.is_admin());
   end if;
+
+  -- 4d. Profiles: everyone reads/updates their own row (role changes are
+  --     blocked by the trigger above); Dev/Admin manage everyone.
+  alter table public.profiles enable row level security;
+  create policy "self read profile" on public.profiles
+    for select using (auth.uid() = id);
+  create policy "self update profile" on public.profiles
+    for update using (auth.uid() = id) with check (auth.uid() = id);
+  create policy "admin read profiles" on public.profiles
+    for select using (public.is_admin());
+  create policy "admin write profiles" on public.profiles
+    for all using (public.is_admin()) with check (public.is_admin());
 end$$;
 
--- 6. Audit: list anyone who currently holds a staff role.
---    Check this list after running — remove anyone you do not recognise.
-select id, email, role, department
+-- 5. Audit ────────────────────────────────────────────────────────
+-- (a) The policies now in force on the secured tables.
+select tablename, policyname, cmd
+  from pg_policies
+ where schemaname = 'public'
+   and tablename in ('brands', 'products', 'departments', 'collections',
+                     'company_info', 'inquiries', 'profiles')
+ order by tablename, policyname;
+
+-- (b) Everyone who currently holds a staff role.
+--     Remove anyone you do not recognise.
+select id, email, role
   from public.profiles
  where role <> 'User'
  order by role, email;
