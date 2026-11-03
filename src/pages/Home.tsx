@@ -10,7 +10,17 @@ import { useCompanyInfo, useBrands, useProducts, useDepartments } from "@/hooks/
 import { markPreloader, usePreloaderLeaving } from "@/lib/preloader";
 import { useThemeMode } from "@/lib/theme";
 
-const BrainScan = lazy(() => import("@/components/BrainScan"));
+// If the chunk can't load (e.g. a tab left open across a new deploy),
+// show the fallback instead of crashing the page.
+type BrainScanProps = React.ComponentProps<typeof import("@/components/BrainScan").default>;
+const BrainScan = lazy(() =>
+  import("@/components/BrainScan").catch(() => ({
+    default: function BrainScanUnavailable(props: BrainScanProps) {
+      useEffect(() => props.onReady(), [props]);
+      return <>{props.fallback}</>;
+    },
+  })),
+);
 
 const VALUES = [
   {
