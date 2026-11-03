@@ -12,6 +12,11 @@ import About from "@/pages/About";
 import Products from "@/pages/Products";
 import Brands from "@/pages/Brands";
 import Contact from "@/pages/Contact";
+import Privacy from "@/pages/legal/Privacy";
+import Terms from "@/pages/legal/Terms";
+import Cookies from "@/pages/legal/Cookies";
+import NotFound from "@/pages/NotFound";
+import CookieConsent from "@/components/CookieConsent";
 import AdminLogin from "@/pages/AdminLogin";
 import Admin from "@/pages/Admin";
 
@@ -31,21 +36,15 @@ export default function App() {
     return (saved as "dark" | "light") || "dark";
   });
 
-  // Resolve the role for a given session. If the profiles table has a row,
-  // use that. Otherwise any authenticated user defaults to "Dev" (full access).
+  // Resolve the role for a given session from the profiles table.
+  // No profile row means no admin access — never assume a role.
   const resolveRole = useCallback(async (session: any): Promise<string | null> => {
     if (!session?.user) return null;
     const timeout = new Promise<null>((resolve) =>
       setTimeout(() => resolve(null), 5000),
     );
     const profile = await Promise.race([getUserProfile(), timeout]);
-
-    if (profile?.role) return profile.role;
-
-    console.warn(
-      `No profile row for ${session.user?.email} — defaulting to Dev.`,
-    );
-    return "Dev";
+    return profile?.role ?? null;
   }, []);
 
   useEffect(() => {
@@ -62,7 +61,6 @@ export default function App() {
 
     const handleSession = async (session: any, tag: string) => {
       if (cancelled) return;
-      console.log(`Auth [${tag}]`, session ? `session for ${session.user?.email}` : "no session");
       // Gate the UI until the role is resolved — prevents ProtectedRoute from
       // rendering with a stale null userRole during the SIGNED_IN → navigate
       // race right after login.
@@ -138,13 +136,18 @@ export default function App() {
         {!isAdminPath && <Nav theme={theme} toggleTheme={toggleTheme} />}
         {!isAdminPath && <CartDrawer />}
 
-        <main key={location.pathname} className="min-h-screen bg-navy-900">
+        {!isAdminPath && <div className="grain" aria-hidden="true" />}
+
+        <main id="main" key={location.pathname} className="min-h-screen bg-navy-900">
           <Routes location={location}>
             <Route path="/" element={<Home />} />
             <Route path="/about" element={<About />} />
             <Route path="/products" element={<Products />} />
             <Route path="/brands" element={<Brands />} />
             <Route path="/contact" element={<Contact />} />
+            <Route path="/privacy" element={<Privacy />} />
+            <Route path="/terms" element={<Terms />} />
+            <Route path="/cookies" element={<Cookies />} />
 
             <Route path="/admin/login" element={<AdminLogin />} />
 
@@ -159,11 +162,13 @@ export default function App() {
                 </ProtectedRoute>
               }
             />
+            <Route path="*" element={<NotFound />} />
           </Routes>
         </main>
 
         {!isAdminPath && <Footer />}
         {!isAdminPath && <WhatsAppButton />}
+        <CookieConsent />
       </div>
     </CartProvider>
   );
