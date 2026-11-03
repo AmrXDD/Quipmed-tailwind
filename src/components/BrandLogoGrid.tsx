@@ -120,71 +120,76 @@ export function brandLogoSrc(b: BrandLike, site: string | null): string | null {
 export default function BrandLogoGrid({ brands }: { brands: BrandLike[] }) {
   if (brands.length === 0) {
     return (
-      <div className="rounded-2xl border border-white/5 bg-white/[0.02] p-8 text-center text-sm text-slate-mid">
+      <div className="rounded-2xl border border-line p-10 text-center text-sm text-slate-mid">
         No brand partners listed yet.
       </div>
     );
   }
+  // One white plate, divided by hairlines — like a printed partner sheet.
+  // Logos sit in greyscale and take their colour on hover.
   return (
-    <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">
-      {brands.map((b) => {
-        const site = brandWebsite(b);
-        const logo = brandLogoSrc(b, site);
-        const href = site ?? `/products?brand=${b.id}`;
-        const external = Boolean(site);
-        return (
-          <a
-            key={b.id}
-            href={href}
-            target={external ? "_blank" : undefined}
-            rel={external ? "noreferrer" : undefined}
-            title={`Visit ${b.name}`}
-            className="group relative flex h-32 items-center justify-center rounded-xl border border-white/10 bg-white p-4 text-center transition-all hover:-translate-y-0.5 hover:border-mint-soft/60 hover:shadow-lg"
-          >
-            {logo ? (
-              <img
-                src={logo}
-                alt={b.name}
-                loading="lazy"
-                referrerPolicy="no-referrer"
-                onError={(e) => {
-                  const img = e.currentTarget;
-                  const stage = img.dataset.fallback ?? "0";
-                  if (stage === "0" && site) {
-                    try {
-                      const host = new URL(site).hostname.replace(/^www\./, "");
-                      img.dataset.fallback = "1";
-                      img.src = `https://logo.clearbit.com/${host}`;
-                      return;
-                    } catch {
-                      /* fall through */
-                    }
-                  }
-                  if (stage !== "2" && site) {
-                    try {
-                      img.dataset.fallback = "2";
-                      img.src = `https://www.google.com/s2/favicons?domain=${new URL(site).hostname}&sz=128`;
-                      return;
-                    } catch {
-                      /* fall through */
-                    }
-                  }
-                  img.style.display = "none";
-                  const sib = img.nextElementSibling as HTMLElement | null;
-                  if (sib) sib.style.display = "flex";
-                }}
-                className="block h-16 max-h-16 w-full max-w-[150px] object-contain opacity-90 transition-opacity group-hover:opacity-100"
-              />
-            ) : null}
-            <span
-              style={{ display: logo ? "none" : "flex" }}
-              className="items-center justify-center text-sm font-semibold text-navy-900"
-            >
-              {b.name}
-            </span>
-          </a>
-        );
-      })}
+    <div className="overflow-hidden rounded-[20px] bg-[#f4f5f2] ring-1 ring-black/5">
+      <ul className="-mb-px -mr-px grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">
+        {brands.map((b) => {
+          const site = brandWebsite(b);
+          const logo = brandLogoSrc(b, site);
+          const href = site ?? `/products?brand=${b.id}`;
+          const external = Boolean(site);
+          return (
+            <li key={b.id} className="border-b border-r border-black/[0.08]">
+              <a
+                href={href}
+                target={external ? "_blank" : undefined}
+                rel={external ? "noopener noreferrer" : undefined}
+                title={external ? `${b.name} (opens manufacturer website)` : b.name}
+                className="scan-hover group relative flex h-32 items-center justify-center p-6 text-center transition-colors duration-500 hover:bg-white md:h-36"
+              >
+                {logo ? (
+                  <img
+                    src={logo}
+                    alt={b.name}
+                    loading="lazy"
+                    referrerPolicy="no-referrer"
+                    onError={(e) => {
+                      const img = e.currentTarget;
+                      const stage = img.dataset.fallback ?? "0";
+                      if (stage === "0" && site) {
+                        try {
+                          const host = new URL(site).hostname.replace(/^www\./, "");
+                          img.dataset.fallback = "1";
+                          img.src = `https://logo.clearbit.com/${host}`;
+                          return;
+                        } catch {
+                          /* fall through */
+                        }
+                      }
+                      if (stage !== "2" && site) {
+                        try {
+                          img.dataset.fallback = "2";
+                          img.src = `https://www.google.com/s2/favicons?domain=${new URL(site).hostname}&sz=128`;
+                          return;
+                        } catch {
+                          /* fall through */
+                        }
+                      }
+                      img.style.display = "none";
+                      const sib = img.nextElementSibling as HTMLElement | null;
+                      if (sib) sib.style.display = "flex";
+                    }}
+                    className="block h-12 max-h-12 w-full max-w-[140px] object-contain opacity-70 grayscale transition-[filter,opacity,transform] duration-500 ease-out-expo group-hover:scale-[1.04] group-hover:opacity-100 group-hover:grayscale-0"
+                  />
+                ) : null}
+                <span
+                  style={{ display: logo ? "none" : "flex" }}
+                  className="items-center justify-center text-sm font-semibold text-[#0b0c0b]"
+                >
+                  {b.name}
+                </span>
+              </a>
+            </li>
+          );
+        })}
+      </ul>
     </div>
   );
 }

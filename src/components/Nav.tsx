@@ -90,8 +90,9 @@ export default function Nav({
           <Link
             to="/"
             aria-label="QuipMed home"
+            data-nav-logo
             className={[
-              "ml-1 mr-2 flex h-9 items-center rounded-full px-3 transition-colors",
+              "ml-1 mr-2 flex h-9 items-center rounded-full px-3 transition-[color,opacity] duration-300",
               scrolled || theme === "light" ? "text-black" : "text-white",
             ].join(" ")}
           >
@@ -305,7 +306,7 @@ export default function Nav({
                           }}
                         />
                       )}
-                      <span className={isActive ? "relative text-white" : "relative"}>
+                      <span className={isActive ? "relative text-[#fff]" : "relative"}>
                         {l.label}
                       </span>
                     </>
@@ -328,7 +329,7 @@ export default function Nav({
           >
             <ShoppingBag size={16} />
             {count > 0 && (
-              <span className="absolute -right-1 -top-1 grid h-4 min-w-[1rem] place-items-center rounded-full bg-cyan-neon px-1 text-[10px] font-bold text-navy-900">
+              <span className="absolute -right-1 -top-1 grid h-4 min-w-[1rem] place-items-center rounded-full bg-cyan-neon px-1 text-[10px] font-bold text-[#fff]">
                 {count}
               </span>
             )}
@@ -392,7 +393,7 @@ export default function Nav({
                       [
                         "block rounded-2xl px-4 py-3 text-sm font-medium transition-colors",
                         isActive
-                          ? "bg-mint text-white"
+                          ? "bg-mint text-[#fff]"
                           : "text-white/80 hover:bg-white/5 hover:text-white",
                       ].join(" ")
                     }

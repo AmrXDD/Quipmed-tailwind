@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { AnimatePresence, motion, LayoutGroup } from "framer-motion";
-import { useNavigate, useSearchParams } from "react-router-dom";
-import { ArrowUpRight, Sparkles, X, Layers, ShoppingBag, Zap, MessageSquareQuote, Package } from "lucide-react";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
+import { ArrowUpRight, X, ShoppingBag, MessageSquareQuote, Package } from "lucide-react";
+import { PageHeader } from "@/components/ui/primitives";
 import { useProducts, useDepartments, useBrands } from "@/hooks/useSupabase";
 import type { Product } from "@/lib/types";
 import { useCart } from "@/lib/cart";
@@ -143,67 +144,62 @@ export default function Products() {
   ];
 
   return (
-    <div className="min-h-screen bg-navy-900 pb-24 pt-32">
-      <div className="mx-auto max-w-[88rem] px-3 sm:px-5 lg:px-6">
-        <header className="flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
-          <div>
-            <span className="inline-flex items-center gap-2 rounded-full border border-cyan-neon/25 bg-cyan-neon/5 px-3 py-1 text-xs font-medium uppercase tracking-[0.2em] text-cyan-soft">
-              <Layers size={12} /> Catalogue
-            </span>
-            <h1 className="mt-5 text-[clamp(2rem,4.5vw,4rem)] font-bold leading-[0.98] tracking-tight text-primary">
-              Products &amp; Solutions
-            </h1>
-            <p className="mt-4 max-w-2xl text-slate-mid">
-              From diagnostic imaging to life support — QuipMed distributes{" "}
-              {products.length}+ curated product lines across {departments.length}{" "}
-              departments, sourced from the world&rsquo;s most trusted
-              medical-technology partners.
+    <div className="min-h-screen bg-navy-900 pb-28 pt-36">
+      <div className="mx-auto max-w-[90rem] px-5 sm:px-8 lg:px-12">
+        <PageHeader
+          eyebrow="Catalogue"
+          title="Products & solutions"
+          lead={
+            <>
+              From diagnostic imaging to life support: {products.length} product lines across{" "}
+              {departments.length} departments, from manufacturers we have vetted ourselves.
+            </>
+          }
+          aside={
+            <p className="tnum font-mono text-[11px] uppercase tracking-[0.14em] text-slate-mid" aria-live="polite">
+              {loading || departmentsLoading
+                ? "Loading catalogue…"
+                : `Showing ${String(visible.length).padStart(2, "0")} of ${String(products.length).padStart(2, "0")}`}
             </p>
-          </div>
-          <div className="flex shrink-0 items-center gap-2 rounded-xl border border-white/5 bg-navy-800/60 px-4 py-3 text-sm text-slate-mid">
-            <Sparkles size={14} className="text-mint" />
-            {loading || departmentsLoading
-              ? "Loading catalogue…"
-              : `${visible.length} items`}
-          </div>
-        </header>
+          }
+        />
 
         {activeBrand && (
-          <div className="mt-6 flex items-center gap-3 rounded-2xl border border-cyan-neon/25 bg-cyan-neon/5 px-4 py-3 text-sm text-cyan-soft">
-            <span className="text-xs font-semibold uppercase tracking-[0.18em] text-cyan-soft/80">
+          <div className="mt-8 flex items-center gap-3 rounded-xl border border-line-strong px-4 py-3 text-sm">
+            <span className="font-mono text-[10.5px] uppercase tracking-[0.14em] text-slate-mid">
               Brand
             </span>
             <span className="font-semibold text-white">{activeBrand.name}</span>
             <button
               onClick={clearBrand}
-              className="ml-auto inline-flex items-center gap-1.5 rounded-full border border-white/15 bg-white/5 px-3 py-1 text-xs font-medium text-slate-light hover:border-white/30 hover:text-white"
+              className="ml-auto inline-flex items-center gap-1.5 rounded-full border border-line-strong px-3 py-1 text-xs font-medium text-slate-light transition-colors hover:text-primary"
             >
               <X size={12} /> Clear
             </button>
           </div>
         )}
 
-        <div className="mt-10 flex flex-col items-start gap-6 lg:flex-row lg:gap-8">
-          <aside className="relative z-10 w-full shrink-0 self-start lg:w-72">
-            <div className="flex flex-col rounded-2xl border border-white/10 bg-navy-800/90 p-3 shadow-[0_4px_30px_rgba(0,0,0,0.25)] backdrop-blur-md">
-              <h3 className="mb-3 px-3 pt-1 text-[11px] font-semibold uppercase tracking-[0.22em] text-mint-soft">
+        <div className="mt-12 flex flex-col items-start gap-10 lg:flex-row lg:gap-12">
+          <aside className="relative z-10 w-full shrink-0 self-start lg:sticky lg:top-28 lg:w-64">
+            <div className="flex flex-col">
+              <h3 className="mb-4 font-mono text-[11px] font-medium uppercase tracking-[0.14em] text-slate-mid">
                 Departments
               </h3>
               <nav className="space-y-1 pr-1">
                 <button
                   onClick={() => setFilterAndUrl("all")}
                   className={[
-                    "flex w-full items-center justify-between gap-2 rounded-xl px-3 py-2 text-left text-sm font-semibold transition-colors",
+                    "relative flex w-full items-center justify-between gap-2 rounded-lg px-3 py-2 text-left text-sm font-medium transition-colors",
                     filter === "all"
-                      ? "bg-cyan-neon text-navy-900"
-                      : "text-slate-light/85 hover:bg-white/5 hover:text-primary",
+                      ? "bg-white/[0.06] text-primary before:absolute before:inset-y-2 before:left-0 before:w-0.5 before:rounded-full before:bg-scan"
+                      : "text-slate-light/75 hover:bg-white/[0.04] hover:text-primary",
                   ].join(" ")}
                 >
                   <span>All products</span>
                   <span
                     className={[
-                      "rounded-full px-1.5 py-0.5 text-[10px] font-semibold",
-                      filter === "all" ? "bg-navy-900/15 text-navy-900" : "bg-white/5 text-slate-mid",
+                      "tnum font-mono text-[11px]",
+                      "text-slate-mid",
                     ].join(" ")}
                   >
                     {counts.get("all") ?? 0}
@@ -220,17 +216,17 @@ export default function Products() {
                         <button
                           onClick={() => setFilterAndUrl(f.key)}
                           className={[
-                            "flex w-full items-center justify-between gap-2 rounded-xl px-3 py-2 text-left text-sm font-semibold transition-colors",
+                            "relative flex w-full items-center justify-between gap-2 rounded-lg px-3 py-2 text-left text-sm font-medium transition-colors",
                             isActive
-                              ? "bg-cyan-neon text-navy-900"
-                              : "text-slate-light/85 hover:bg-white/5 hover:text-primary",
+                              ? "bg-white/[0.06] text-primary before:absolute before:inset-y-2 before:left-0 before:w-0.5 before:rounded-full before:bg-scan"
+                              : "text-slate-light/75 hover:bg-white/[0.04] hover:text-primary",
                           ].join(" ")}
                         >
                           <span className="truncate">{f.label}</span>
                           <span
                             className={[
-                              "rounded-full px-1.5 py-0.5 text-[10px] font-semibold",
-                              isActive ? "bg-navy-900/15 text-navy-900" : "bg-white/5 text-slate-mid",
+                              "tnum font-mono text-[11px]",
+                              "text-slate-mid",
                             ].join(" ")}
                           >
                             {counts.get(f.key) ?? 0}
@@ -238,24 +234,22 @@ export default function Products() {
                         </button>
 
                         {isActive && subs.length > 0 && (
-                          <ul className="mt-1 ml-2 space-y-0.5 border-l border-white/10 pl-3">
+                          <ul className="mb-2 ml-3 mt-1 space-y-0.5 border-l border-line pl-3">
                             <li>
                               <button
                                 onClick={() => setSubFilterAndUrl("all")}
                                 className={[
-                                  "flex w-full items-center justify-between gap-2 rounded-lg px-2.5 py-1.5 text-left text-xs font-medium transition-colors",
+                                  "flex w-full items-center justify-between gap-2 rounded-md px-2.5 py-1.5 text-left text-[13px] transition-colors",
                                   subFilter === "all"
-                                    ? "bg-mint text-navy-900"
-                                    : "text-slate-light/70 hover:bg-white/5 hover:text-primary",
+                                    ? "text-primary"
+                                    : "text-slate-light/65 hover:text-primary",
                                 ].join(" ")}
                               >
                                 <span>Show all</span>
                                 <span
                                   className={[
-                                    "rounded-full px-1.5 py-0.5 text-[10px] font-semibold",
-                                    subFilter === "all"
-                                      ? "bg-navy-900/15 text-navy-900"
-                                      : "bg-white/5 text-slate-mid",
+                                    "tnum font-mono text-[11px]",
+                                    "text-slate-mid",
                                   ].join(" ")}
                                 >
                                   {inDepartment.length}
@@ -269,19 +263,17 @@ export default function Products() {
                                   <button
                                     onClick={() => setSubFilterAndUrl(s)}
                                     className={[
-                                      "flex w-full items-center justify-between gap-2 rounded-lg px-2.5 py-1.5 text-left text-xs font-medium transition-colors",
+                                      "flex w-full items-center justify-between gap-2 rounded-md px-2.5 py-1.5 text-left text-[13px] transition-colors",
                                       sActive
-                                        ? "bg-mint text-navy-900"
-                                        : "text-slate-light/70 hover:bg-white/5 hover:text-primary",
+                                        ? "text-primary"
+                                        : "text-slate-light/65 hover:text-primary",
                                     ].join(" ")}
                                   >
                                     <span className="truncate">{s}</span>
                                     <span
                                       className={[
-                                        "rounded-full px-1.5 py-0.5 text-[10px] font-semibold",
-                                        sActive
-                                          ? "bg-navy-900/15 text-navy-900"
-                                          : "bg-white/5 text-slate-mid",
+                                        "tnum font-mono text-[11px]",
+                                        "text-slate-mid",
                                       ].join(" ")}
                                     >
                                       {subCount(f.key, s)}
@@ -303,14 +295,16 @@ export default function Products() {
             <LayoutGroup id="product-grid">
               <motion.div
                 layout
-                className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3"
+                className="grid grid-cols-1 gap-x-5 gap-y-8 sm:grid-cols-2 xl:grid-cols-3"
               >
                 {loading &&
                   Array.from({ length: 8 }).map((_, i) => (
-                    <div
-                      key={`sk-${i}`}
-                      className="h-64 animate-pulse rounded-2xl border border-white/5 bg-navy-800/40"
-                    />
+                    <div key={`sk-${i}`} className="animate-pulse">
+                      <div className="aspect-[4/3] rounded-[18px] bg-white/[0.04]" />
+                      <div className="mt-5 h-3 w-24 rounded bg-white/[0.05]" />
+                      <div className="mt-3 h-5 w-3/4 rounded bg-white/[0.06]" />
+                      <div className="mt-3 h-3 w-full rounded bg-white/[0.04]" />
+                    </div>
                   ))}
                 <AnimatePresence mode="popLayout">
                   {!loading && visible.map((p) => (
@@ -321,66 +315,62 @@ export default function Products() {
                       onClick={() => setActive(p)}
                       initial={{ opacity: 0, y: 20 }}
                       animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, scale: 0.95 }}
-                      transition={{ duration: 0.35, ease: [0.2, 0.7, 0.2, 1] }}
-                      whileHover={{ y: -6, rotateX: 3, rotateY: -3 }}
-                      style={{ transformStyle: "preserve-3d", perspective: 1200 }}
-                      className="group relative overflow-hidden rounded-2xl border border-white/5 bg-navy-800/80 p-6 text-left transition-colors hover:border-cyan-neon/30"
+                      exit={{ opacity: 0, scale: 0.97 }}
+                      transition={{ duration: 0.45, ease: [0.16, 1, 0.3, 1] }}
+                      className="group flex flex-col text-left outline-none"
                     >
-                      <div className="mb-5 flex h-40 items-center justify-center overflow-hidden rounded-xl bg-white">
+                      {/* Specimen plate: product on a paper-white field */}
+                      <div className="scan-hover relative flex aspect-[4/3] items-center justify-center overflow-hidden rounded-[18px] bg-[#f4f5f2] ring-1 ring-black/5 transition-shadow duration-500 group-hover:shadow-[0_24px_60px_-28px_rgba(0,0,0,0.65)] group-focus-visible:ring-2 group-focus-visible:ring-scan">
                         {(() => {
                           const src = productImageFor(p.slug, p.image_url);
                           return src ? (
                             <img
-                              src={proxyImage(src, { w: 480, h: 320 })}
+                              src={proxyImage(src, { w: 640, h: 480 })}
                               alt={p.name}
                               loading="lazy"
                               referrerPolicy="no-referrer"
-                              className="h-full w-full object-contain transition-transform duration-500 group-hover:scale-105"
+                              className="h-full w-full object-contain p-7 mix-blend-multiply transition-transform duration-700 ease-out-expo group-hover:scale-[1.04]"
                             />
                           ) : (
-                            <Package size={32} className="text-slate-mid" />
+                            <Package size={30} strokeWidth={1.5} className="text-black/30" />
                           );
                         })()}
-                      </div>
-                      <div className="flex items-start justify-between gap-3">
-                        <motion.span
-                          layoutId={`cat-${p.id}`}
-                          className="rounded-full border border-mint/25 bg-mint/10 px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-mint"
-                        >
-                          {p.subcategory ?? p.category}
-                        </motion.span>
+                        <span className="absolute left-4 top-4 font-mono text-[10px] uppercase tracking-[0.14em] text-black/45">
+                          {p.brand_name ?? "QuipMed"}
+                        </span>
                         {p.featured && (
-                          <span className="rounded-full border border-cyan-neon/30 bg-cyan-neon/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-cyan-soft">
+                          <span className="absolute right-4 top-4 rounded-[4px] bg-[#0b0c0b] px-2 py-1 font-mono text-[9.5px] uppercase tracking-[0.14em] text-[#f4f5f2]">
                             Featured
                           </span>
                         )}
                       </div>
-                      <motion.h3
-                        layoutId={`name-${p.id}`}
-                        className="mt-5 text-lg font-bold leading-tight text-primary transition-colors group-hover:text-cyan-soft"
-                      >
-                        {p.name}
-                      </motion.h3>
-                      {p.brand_name && (
-                        <p className="mt-1 text-xs font-medium uppercase tracking-[0.18em] text-slate-mid">
-                          by {p.brand_name}
+
+                      <div className="flex flex-1 flex-col px-1 pt-5">
+                        <motion.span
+                          layoutId={`cat-${p.id}`}
+                          className="font-mono text-[10.5px] uppercase tracking-[0.14em] text-slate-mid"
+                        >
+                          {p.subcategory ?? p.category}
+                        </motion.span>
+                        <motion.h3
+                          layoutId={`name-${p.id}`}
+                          className="mt-2 text-[19px] font-medium leading-snug tracking-[-0.01em] text-primary"
+                        >
+                          {p.name}
+                        </motion.h3>
+                        <p className="mb-5 mt-2 line-clamp-2 text-sm leading-relaxed text-slate-mid">
+                          {p.description}
                         </p>
-                      )}
-                      <p className="mt-4 line-clamp-3 text-sm leading-relaxed text-slate-light/70">
-                        {p.description}
-                      </p>
-                      <div className="mt-6 flex items-center justify-between text-xs text-slate-mid">
-                        <span className="inline-flex items-center gap-1">
-                          <span className="h-1.5 w-1.5 rounded-full bg-mint" />
-                          {p.category}
+                        <span className="mt-auto flex items-center justify-between border-t border-line pt-4 text-[13px] font-semibold text-primary">
+                          <span className="bg-[linear-gradient(currentColor,currentColor)] bg-[length:0%_1px] bg-left-bottom bg-no-repeat pb-0.5 transition-[background-size] duration-500 ease-out-expo group-hover:bg-[length:100%_1px]">
+                            View details
+                          </span>
+                          <ArrowUpRight
+                            size={16}
+                            className="text-scan transition-transform duration-300 group-hover:-translate-y-0.5 group-hover:translate-x-0.5"
+                          />
                         </span>
-                        <ArrowUpRight
-                          size={16}
-                          className="text-cyan-neon transition-transform group-hover:-translate-y-0.5 group-hover:translate-x-0.5"
-                        />
                       </div>
-                      <span className="pointer-events-none absolute -bottom-28 -right-28 h-64 w-64 rounded-full bg-cyan-neon/10 opacity-0 blur-3xl transition-opacity group-hover:opacity-100" />
                     </motion.button>
                   ))}
                 </AnimatePresence>
@@ -388,8 +378,14 @@ export default function Products() {
             </LayoutGroup>
 
             {visible.length === 0 && !loading && (
-              <div className="mt-20 rounded-2xl border border-white/5 bg-navy-800/40 p-10 text-center text-slate-mid">
-                No products in this category yet.
+              <div className="rounded-[18px] border border-dashed border-line-strong px-8 py-16 text-center">
+                <p className="text-lg font-medium text-primary">Nothing listed here yet.</p>
+                <p className="mx-auto mt-2 max-w-[42ch] text-sm text-slate-mid">
+                  We may still be able to source it. Tell us what you need and we&rsquo;ll check with our manufacturers.
+                </p>
+                <Link to="/contact" className="mt-6 inline-block text-sm font-semibold text-primary underline decoration-line-strong underline-offset-4 hover:decoration-scan">
+                  Ask about a product
+                </Link>
               </div>
             )}
           </div>
@@ -438,11 +434,11 @@ function ProductDetail({
       <motion.article
         layoutId={`card-${product.id}`}
         onClick={(e) => e.stopPropagation()}
-        className="relative mx-auto max-w-3xl overflow-hidden rounded-3xl border border-white/10 bg-navy-800 p-8 md:p-10"
+        className="relative mx-auto max-w-3xl overflow-hidden rounded-[24px] border border-line bg-[var(--surface-raised)] p-6 md:p-10"
       >
         <button
           onClick={onClose}
-          className="absolute right-4 top-4 grid h-10 w-10 place-items-center rounded-full bg-white/5 text-primary ring-1 ring-white/10 hover:bg-white/10"
+          className="absolute right-4 top-4 z-10 grid h-10 w-10 place-items-center rounded-full bg-[#0b0c0b] text-[#f4f5f2] transition-transform hover:rotate-90"
           aria-label="Close"
         >
           <X size={16} />
@@ -450,58 +446,59 @@ function ProductDetail({
         {(() => {
           const src = productImageFor(product.slug, product.image_url);
           return src ? (
-            <div className="mb-6 flex h-64 items-center justify-center overflow-hidden rounded-2xl bg-white">
+            <div className="mb-8 flex aspect-[16/10] items-center justify-center overflow-hidden rounded-[18px] bg-[#f4f5f2]">
               <img
                 src={proxyImage(src, { w: 960, h: 640 })}
                 alt={product.name}
                 referrerPolicy="no-referrer"
-                className="h-full w-full object-contain"
+                className="h-full w-full object-contain p-8 mix-blend-multiply"
               />
             </div>
           ) : null;
         })()}
         <motion.span
           layoutId={`cat-${product.id}`}
-          className="rounded-full border border-mint/25 bg-mint/10 px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-mint"
+          className="font-mono text-[11px] uppercase tracking-[0.14em] text-slate-mid"
         >
           {product?.subcategory ?? product?.category}
         </motion.span>
         <motion.h2
           layoutId={`name-${product.id}`}
-          className="mt-5 text-3xl font-bold leading-tight text-primary md:text-4xl"
+          className="mt-3 text-3xl font-semibold leading-tight tracking-[-0.025em] text-primary md:text-[2.6rem]"
         >
           {product?.name}
         </motion.h2>
         {product?.brand_name && (
-          <p className="mt-2 text-sm font-medium uppercase tracking-[0.18em] text-slate-mid">
-            by {product.brand_name}
-          </p>
+          <p className="mt-2 text-[15px] text-slate-mid">by {product.brand_name}</p>
         )}
         <p className="mt-6 text-base leading-relaxed text-slate-light/80">
           {product?.description}
         </p>
 
         {!isQuotable(product) ? (
-          <p className="mt-6 font-mono text-3xl font-bold text-cyan-neon">
-            ${(product.price ?? 0).toLocaleString()}
+          <p className="mt-6">
+            <span className="tnum font-mono text-3xl font-medium text-primary">
+              ${(product.price ?? 0).toLocaleString()}
+            </span>
+            <span className="ml-3 text-xs text-slate-mid">Indicative · excl. taxes, delivery &amp; installation</span>
           </p>
         ) : (
-          <p className="mt-6 inline-flex items-center gap-2 rounded-full border border-mint/25 bg-mint/5 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-mint">
+          <p className="mt-6 inline-flex items-center gap-2 font-mono text-[11px] uppercase tracking-[0.14em] text-scan">
             <MessageSquareQuote size={12} /> Quote on request
           </p>
         )}
         {features.length > 0 && (
           <div className="mt-8">
-            <h3 className="text-xs font-semibold uppercase tracking-[0.22em] text-cyan-soft">
+            <h3 className="font-mono text-[11px] font-medium uppercase tracking-[0.14em] text-slate-mid">
               Key features
             </h3>
-            <ul className="mt-4 grid gap-2 sm:grid-cols-2">
+            <ul className="mt-3 grid gap-x-8 sm:grid-cols-2">
               {features.map((f) => (
                 <li
                   key={f}
-                  className="flex items-start gap-2 rounded-xl border border-white/5 bg-navy-900/50 px-3 py-2 text-sm text-slate-light/90"
+                  className="flex items-start gap-3 border-t border-line py-3 text-sm text-slate-light/90"
                 >
-                  <span className="mt-1 h-1.5 w-1.5 shrink-0 rounded-full bg-mint" />
+                  <span className="mt-[0.6em] h-px w-3 shrink-0 bg-scan" />
                   {f}
                 </li>
               ))}
@@ -515,12 +512,17 @@ function ProductDetail({
               href={product.source_url}
               target="_blank"
               rel="noreferrer"
-              className="inline-flex items-center gap-2 text-xs text-slate-mid hover:text-cyan-soft"
+              className="inline-flex items-center gap-2 text-xs text-slate-mid transition-colors hover:text-primary"
             >
               Manufacturer info <ArrowUpRight size={12} />
             </a>
           </div>
         )}
+        <p className="mt-8 border-t border-line pt-5 text-xs leading-relaxed text-slate-mid">
+          Specifications and images come from the manufacturer, are for reference and may change.
+          Availability in Kuwait is subject to regulatory approval. A sale is confirmed only by a
+          written quotation. <Link to="/terms" className="underline underline-offset-2 hover:text-primary">Terms of use</Link>
+        </p>
       </motion.article>
     </motion.div>
   );
@@ -568,7 +570,7 @@ function ProductCTAs({
       <div className="mt-8">
         <button
           onClick={requestQuote}
-          className="inline-flex items-center gap-2 rounded-full bg-cyan-neon px-6 py-3 text-sm font-semibold text-navy-900 hover:shadow-neon"
+          className="inline-flex items-center gap-2 rounded-full bg-primary px-6 py-3 text-sm font-semibold text-[var(--bg-primary)] transition-colors hover:bg-mint-soft hover:text-white active:scale-[0.98]"
         >
           <MessageSquareQuote size={14} /> Request a quote
         </button>
@@ -580,15 +582,15 @@ function ProductCTAs({
     <div className="mt-8 flex flex-wrap items-center gap-3">
       <button
         onClick={addToCart}
-        className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/5 px-5 py-2.5 text-sm font-semibold text-primary hover:bg-white/10"
+        className="inline-flex items-center gap-2 rounded-full border border-line-strong px-5 py-2.5 text-sm font-semibold text-primary transition-colors hover:bg-white/[0.06]"
       >
-        <ShoppingBag size={14} /> Add to cart
+        <ShoppingBag size={14} /> Add to quote list
       </button>
       <button
         onClick={buyNow}
-        className="inline-flex items-center gap-2 rounded-full bg-cyan-neon px-5 py-2.5 text-sm font-semibold text-navy-900 hover:shadow-neon"
+        className="inline-flex items-center gap-2 rounded-full bg-primary px-5 py-2.5 text-sm font-semibold text-[var(--bg-primary)] transition-colors hover:bg-mint-soft hover:text-white active:scale-[0.98]"
       >
-        <Zap size={14} /> Buy now
+        <MessageSquareQuote size={14} /> Add &amp; review list
       </button>
     </div>
   );

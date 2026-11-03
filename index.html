@@ -1,71 +1,233 @@
 <!doctype html>
-<html lang="en" class="bg-navy-800">
+<html lang="en">
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/png" href="/brand-logo-main.png" media="(prefers-color-scheme: dark)" />
     <link rel="icon" type="image/png" href="/logo-secondary-black.png" media="(prefers-color-scheme: light)" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-    <meta name="theme-color" content="#0A192F" />
-    <meta name="description" content="QuipMed — Leading Medical Innovation. Procurement, distribution, and development of advanced medical equipment for healthcare facilities." />
+    <meta name="theme-color" content="#0b0c0b" />
+    <meta name="description" content="QuipMed — procurement, distribution and development of advanced medical equipment for healthcare facilities in Kuwait." />
+    <meta property="og:title" content="QuipMed · Leading Medical Innovation" />
+    <meta property="og:description" content="Procurement, distribution and development of advanced medical equipment for healthcare facilities in Kuwait." />
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://quipmed.co" />
     <title>QuipMed · Leading Medical Innovation</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link
-      href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&display=swap"
-      rel="stylesheet"
-    />
+    <link rel="preload" as="image" href="/logo-secondary-black.png" crossorigin="anonymous" />
     <style>
-      #app-splash {
+      /* ── Preloader ──────────────────────────────────────────────
+         The wordmark is drawn twice through a CSS mask: a faint ghost
+         and a solid fill that grows downward behind a scan line, so the
+         logo is "scanned" into place. On exit the logo flies into the
+         nav and the panel wipes upward. Driven by the script below. */
+      html { background: #0b0c0b; }
+      html.theme-white { background: #fafaf8; }
+      html[data-preloading] [data-nav-logo] { opacity: 0; }
+      #preloader {
+        --pl-bg: #0b0c0b;
+        --pl-ink: #f4f5f2;
+        --pl-muted: rgba(244, 245, 242, 0.42);
+        --pl-ghost: rgba(244, 245, 242, 0.1);
+        --pl-scan: #8fd4a6;
         position: fixed;
         inset: 0;
-        z-index: 9999;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-        gap: 18px;
-        background: #0A192F;
-        color: #e5f2ff;
-        font-family: "Outfit", system-ui, sans-serif;
-        transition: opacity 0.45s ease;
-      }
-      #app-splash.app-splash--hidden {
-        opacity: 0;
+        z-index: 100;
         pointer-events: none;
       }
-      #app-splash .splash-ring {
-        width: 54px;
-        height: 54px;
-        border-radius: 50%;
-        border: 2px solid rgba(100, 255, 218, 0.15);
-        border-top-color: #64ffda;
-        animation: splash-spin 0.85s linear infinite;
+      html.theme-white #preloader {
+        --pl-bg: #fafaf8;
+        --pl-ink: #0b0c0b;
+        --pl-muted: rgba(11, 12, 11, 0.5);
+        --pl-ghost: rgba(11, 12, 11, 0.08);
+        --pl-scan: #1f7a45;
       }
-      #app-splash .splash-label {
-        font-size: 10px;
-        letter-spacing: 0.35em;
+      #preloader .pl-bg {
+        position: absolute;
+        inset: 0;
+        background: var(--pl-bg);
+        pointer-events: auto;
+        clip-path: inset(0 0 0 0);
+        transition: clip-path 0.9s cubic-bezier(0.76, 0, 0.24, 1);
+      }
+      #preloader.is-leaving .pl-bg { clip-path: inset(0 0 100% 0); }
+      #preloader .pl-logo {
+        position: absolute;
+        left: 50%;
+        top: 50%;
+        width: min(46vw, 280px);
+        aspect-ratio: 1284 / 656;
+        transform: translate(-50%, -50%);
+        transform-origin: 0 0;
+        will-change: transform;
+      }
+      #preloader .pl-logo > i {
+        position: absolute;
+        inset: 0;
+        -webkit-mask: url("/logo-secondary-black.png") center / contain no-repeat;
+        mask: url("/logo-secondary-black.png") center / contain no-repeat;
+      }
+      #preloader .pl-ghost { background: var(--pl-ghost); }
+      #preloader .pl-fill {
+        background: var(--pl-ink);
+        clip-path: inset(0 0 calc(100% - var(--p, 0%)) 0);
+      }
+      #preloader .pl-line {
+        position: absolute;
+        left: -14%;
+        right: -14%;
+        top: var(--p, 0%);
+        height: 1px;
+        background: linear-gradient(90deg, transparent, var(--pl-scan) 18%, var(--pl-scan) 82%, transparent);
+        box-shadow: 0 0 14px 1px var(--pl-scan);
+        transition: opacity 0.3s ease;
+      }
+      #preloader.is-scanned .pl-line { opacity: 0; }
+      #preloader .pl-meta {
+        position: absolute;
+        left: 24px;
+        right: 24px;
+        bottom: 28px;
+        display: flex;
+        justify-content: space-between;
+        font: 500 11px/1 "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+        letter-spacing: 0.14em;
         text-transform: uppercase;
-        color: rgba(229, 242, 255, 0.6);
+        color: var(--pl-muted);
+        font-variant-numeric: tabular-nums;
+        transition: opacity 0.3s ease;
       }
-      #app-splash .splash-brand {
-        font-size: 14px;
-        font-weight: 600;
-        letter-spacing: 0.3em;
-        text-transform: uppercase;
-        color: #64ffda;
-      }
-      @keyframes splash-spin {
-        to { transform: rotate(360deg); }
+      #preloader.is-scanned .pl-meta { opacity: 0; }
+      @media (prefers-reduced-motion: reduce) {
+        #preloader .pl-bg { transition: opacity 0.4s ease; }
+        #preloader.is-leaving .pl-bg { clip-path: none; opacity: 0; }
+        #preloader .pl-line { display: none; }
       }
     </style>
+    <script>
+      (function () {
+        var d = document.documentElement;
+        try {
+          if (localStorage.getItem("theme") === "light") d.classList.add("theme-white");
+        } catch (e) {}
+        d.setAttribute("data-preloading", "");
+      })();
+    </script>
   </head>
   <body class="bg-navy-800 text-white antialiased">
+    <a href="#main" class="skip-link">Skip to content</a>
     <div id="root"></div>
-    <div id="app-splash" aria-hidden="true">
-      <div class="splash-ring"></div>
-      <div class="splash-brand">QuipMed</div>
-      <div class="splash-label">Loading</div>
+    <div id="preloader" aria-hidden="true">
+      <div class="pl-bg"></div>
+      <div class="pl-logo">
+        <i class="pl-ghost"></i>
+        <i class="pl-fill"></i>
+        <span class="pl-line"></span>
+      </div>
+      <div class="pl-meta"><span>QuipMed&nbsp;&nbsp;/&nbsp;&nbsp;Kuwait</span><span id="pl-pct">000</span></div>
     </div>
+    <script>
+      /* Preloader controller.
+         Progress is real: each stage the app reports (app mounted, hero
+         asset ready) raises the target; a gentle time creep keeps it
+         moving, and a hard cap guarantees the site is never held back. */
+      (function () {
+        var root = document.getElementById("preloader");
+        if (!root) return;
+        var d = document.documentElement;
+        var logo = root.querySelector(".pl-logo");
+        var pct = document.getElementById("pl-pct");
+        var reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+        var seen = false;
+        try { seen = sessionStorage.getItem("quipmed.preloaded") === "1"; } catch (e) {}
+
+        var start = performance.now();
+        var MIN = reduce ? 200 : seen ? 650 : 1600; // ms on screen at minimum
+        var MAX = 5000;                                // never block longer than this
+        var needHero = location.pathname === "/";
+        var stages = { dom: false, app: false, hero: !needHero };
+        var shown = 0;
+        var finished = false;
+
+        function target() {
+          var t = 8;
+          if (stages.dom) t += 22;
+          if (stages.app) t += 35;
+          if (stages.hero) t += 35;
+          var creep = Math.min(88, ((performance.now() - start) / MAX) * 100);
+          var all = stages.dom && stages.app && stages.hero;
+          return all ? 100 : Math.max(Math.min(t, 96), creep);
+        }
+
+        function done() {
+          finished = true;
+          window.__quipmedPreloader.done = true;
+          try { sessionStorage.setItem("quipmed.preloaded", "1"); } catch (e) {}
+          root.classList.add("is-scanned");
+
+          var navLogo = document.querySelector("[data-nav-logo] img");
+          var from = logo.getBoundingClientRect();
+          var to = navLogo && navLogo.getBoundingClientRect();
+          var canFly = !reduce && to && to.width > 0 && to.top < window.innerHeight;
+
+          setTimeout(function () {
+            if (canFly) {
+              var s = to.width / from.width;
+              logo.style.transition = "transform 0.95s cubic-bezier(0.76, 0, 0.24, 1)";
+              logo.style.transform = "translate(" + to.left + "px," + to.top + "px) scale(" + s + ")";
+              // Re-anchor the logo to the viewport origin so the transform above is absolute.
+              logo.style.left = "0";
+              logo.style.top = "0";
+            } else {
+              logo.style.transition = "opacity 0.4s ease";
+              logo.style.opacity = "0";
+            }
+            root.classList.add("is-leaving");
+            window.dispatchEvent(new Event("quipmed:preloader-leave"));
+          }, reduce ? 0 : 260);
+
+          setTimeout(function () {
+            d.removeAttribute("data-preloading");
+            window.dispatchEvent(new Event("quipmed:preloader-done"));
+            root.remove();
+          }, reduce ? 450 : 1300);
+        }
+
+        // Pin the logo to absolute pixel coordinates before flying so the
+        // translate() above starts from where it is drawn now.
+        function pinLogo() {
+          var r = logo.getBoundingClientRect();
+          logo.style.left = "0";
+          logo.style.top = "0";
+          logo.style.transform = "translate(" + r.left + "px," + r.top + "px)";
+        }
+
+        function tick() {
+          if (finished) return;
+          var t = target();
+          shown += (t - shown) * 0.085;
+          if (t - shown < 0.4) shown = t;
+          root.style.setProperty("--p", shown.toFixed(2) + "%");
+          logo.style.setProperty("--p", shown.toFixed(2) + "%");
+          pct.textContent = String(Math.round(shown)).padStart(3, "0");
+          var elapsed = performance.now() - start;
+          if ((shown >= 100 && elapsed >= MIN) || elapsed >= MAX + 600) {
+            pinLogo();
+            // one frame so the pinned position applies before transitioning
+            requestAnimationFrame(function () { requestAnimationFrame(done); });
+            return;
+          }
+          requestAnimationFrame(tick);
+        }
+
+        window.__quipmedPreloader = {
+          done: false,
+          mark: function (stage) { stages[stage] = true; },
+        };
+        if (document.readyState !== "loading") stages.dom = true;
+        else document.addEventListener("DOMContentLoaded", function () { stages.dom = true; });
+        setTimeout(function () { stages.hero = true; stages.app = true; }, MAX);
+        requestAnimationFrame(tick);
+      })();
+    </script>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

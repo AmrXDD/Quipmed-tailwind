@@ -1,24 +1,9 @@
 import { motion } from "framer-motion";
 import { Link } from "react-router-dom";
-import {
-  Target,
-  Eye,
-  ShieldCheck,
-  Sparkles,
-  Zap,
-  ArrowRight,
-  BadgeCheck,
-  Scan,
-  Bed,
-  Syringe,
-  Stethoscope,
-  HeartPulse,
-  Microscope,
-  Linkedin,
-  Mail,
-  MapPin,
-  Briefcase,
-} from "lucide-react";
+import { Linkedin } from "lucide-react";
+import DepartmentIndex from "@/components/DepartmentIndex";
+import ValuesList from "@/components/ValuesList";
+import { Eyebrow, PageHeader, PrimaryButton, TextLink } from "@/components/ui/primitives";
 import { useCompanyInfo, useBrands, useProducts, useDepartments } from "@/hooks/useSupabase";
 
 export default function About() {
@@ -27,437 +12,223 @@ export default function About() {
   const { products } = useProducts();
   const { departments } = useDepartments();
 
+  const values = [
+    {
+      k: c.value_01 || "Reliable",
+      d: "Time-tested equipment, validated supply chains and certified partners across 14 countries. We only distribute what we would stake our reputation on.",
+    },
+    {
+      k: c.value_02 || "Modern",
+      d: "From 4K flexible endoscopy to immersive VR therapy, we bring in the technologies that will define the next decade of clinical practice.",
+    },
+    {
+      k: c.value_03 || "Strong",
+      d: "Long-term relationships with Neusoft, Allengers, Tuttnauer, EMS Swiss and other manufacturers, backed by service teams on the ground in Kuwait.",
+    },
+  ];
+
+  const stats = [
+    { k: "Brand partners", v: brands.length ? String(brands.length) : "—" },
+    { k: "Product lines", v: products.length ? String(products.length) : "—" },
+    { k: "Departments", v: String(departments.length) },
+    { k: "Countries of origin", v: "14" },
+  ];
+
   return (
-    <div className="min-h-screen bg-navy-900 pb-24 pt-32">
-      {/* ── Hero ───────────────────────────────────────── */}
-      <section className="mx-auto max-w-7xl px-5 lg:px-8">
-        <motion.span
-          initial={{ opacity: 0, y: 8 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.4 }}
-          className="inline-flex items-center gap-2 rounded-full border border-mint/30 bg-mint/10 px-3 py-1 text-xs font-medium uppercase tracking-[0.2em] text-mint-soft"
-        >
-          <Sparkles size={12} /> About QuipMed
-        </motion.span>
-
-        <motion.h1
-          initial={{ opacity: 0, y: 12 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, delay: 0.05 }}
-          className="mt-5 max-w-4xl text-[clamp(2.25rem,5vw,4.5rem)] font-bold leading-[0.98] tracking-tight text-primary"
-        >
-          Connecting the world&rsquo;s best medical technology{" "}
-          <span className="text-mint">with Kuwaiti healthcare</span>.
-        </motion.h1>
-
-        <motion.p
-          initial={{ opacity: 0, y: 12 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, delay: 0.1 }}
-          className="mt-6 max-w-3xl text-lg leading-relaxed text-primary/70"
-        >
-          {c.about}
-        </motion.p>
-
-        {/* Stats strip */}
-        <motion.dl
-          initial={{ opacity: 0, y: 12 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, delay: 0.2 }}
-          className="mt-12 grid grid-cols-2 gap-4 border-t border-white/10 pt-8 md:grid-cols-4"
-        >
-          {[
-            { k: "Brand Partners", v: `${brands.length}+` },
-            { k: "Product Lines", v: `${products.length}+` },
-            { k: "Specialities", v: String(departments.length) },
-            { k: "Countries", v: "14" },
-          ].map((s) => (
-            <div key={s.k} className="rounded-2xl border border-white/5 bg-white/[0.02] p-5">
-              <dt className="text-[10px] font-semibold uppercase tracking-[0.2em] text-primary/50">
-                {s.k}
-              </dt>
-              <dd className="mt-1 text-4xl font-bold tracking-tight text-primary">
-                {s.v}
-              </dd>
+    <div className="min-h-screen bg-navy-900 pb-28 pt-36">
+      {/* ── Header ─────────────────────────────────────── */}
+      <section className="mx-auto max-w-[90rem] px-5 sm:px-8 lg:px-12">
+        <PageHeader
+          eyebrow="About QuipMed"
+          title={
+            <>
+              Connecting the world&rsquo;s best medical technology{" "}
+              <span className="text-slate-mid">with Kuwaiti healthcare.</span>
+            </>
+          }
+          lead={c.about}
+        />
+        <dl className="grid grid-cols-2 md:grid-cols-4">
+          {stats.map((s, i) => (
+            <div
+              key={s.k}
+              className={`border-b border-line py-7 md:border-b-0 ${i % 2 === 1 ? "border-l pl-5" : ""} ${i > 0 ? "md:border-l md:pl-6" : ""}`}
+            >
+              <dt className="font-mono text-[10.5px] uppercase tracking-[0.14em] text-slate-mid">{s.k}</dt>
+              <dd className="tnum mt-2 text-4xl font-medium tracking-[-0.03em] text-primary md:text-5xl">{s.v}</dd>
             </div>
           ))}
-        </motion.dl>
+        </dl>
       </section>
 
       {/* ── Mission / Vision ──────────────────────────── */}
-      <section className="mx-auto mt-24 max-w-7xl px-5 lg:px-8">
-        <div className="grid gap-4 md:grid-cols-2">
-          <MVCard
-            icon={<Target size={24} strokeWidth={2.2} />}
-            label="Mission"
-            n="01"
-            gradient="from-cyan-500/20 via-blue-500/10 to-transparent"
-            body={c.mission}
-          />
-          <MVCard
-            icon={<Eye size={24} strokeWidth={2.2} />}
-            label="Vision"
-            n="02"
-            gradient="from-mint/20 via-cyan-neon/10 to-transparent"
-            body={c.vision}
-          />
-        </div>
-      </section>
-
-      {/* ── Values ─────────────────────────────────────── */}
-      <section className="mx-auto mt-24 max-w-7xl px-5 lg:px-8">
-        <header className="flex flex-wrap items-end justify-between gap-4">
-          <div>
-            <h2 className="text-[10px] font-semibold uppercase tracking-[0.24em] text-mint">
-              Values
-            </h2>
-            <p className="mt-3 max-w-2xl text-3xl font-bold tracking-tight text-primary md:text-4xl">
-              Three principles that anchor every procurement decision we make.
-            </p>
-          </div>
-        </header>
-
-        <div className="mt-10 grid gap-4 md:grid-cols-3">
+      <section className="mx-auto mt-24 max-w-[90rem] px-5 sm:px-8 md:mt-36 lg:px-12">
+        <div className="grid border-t border-line md:grid-cols-2">
           {[
-            {
-              n: "01",
-              k: c.value_01 ?? "Reliable",
-              d: "Time-tested equipment, validated supply chains, and certified partners across 14 countries. We only distribute what we would stake our reputation on.",
-              Icon: ShieldCheck,
-              gradient: "from-cyan-500/20 via-blue-500/10 to-transparent",
-            },
-            {
-              n: "02",
-              k: c.value_02 ?? "Modern",
-              d: "From 4K flexible endoscopy to immersive VR therapy — we curate the technologies that will define the next decade of clinical practice.",
-              Icon: Zap,
-              gradient: "from-mint/20 via-cyan-neon/10 to-transparent",
-            },
-            {
-              n: "03",
-              k: c.value_03 ?? "Strong",
-              d: "Long-term relationships with Neusoft, Allengers, Tuttnauer, EMS Swiss and 22 other manufacturers — backed by on-the-ground Kuwait service teams.",
-              Icon: BadgeCheck,
-              gradient: "from-violet-500/20 via-fuchsia-500/10 to-transparent",
-            },
-          ].map((v, i) => (
+            { label: "Mission", body: c.mission },
+            { label: "Vision", body: c.vision },
+          ].map((m, i) => (
             <motion.article
-              key={v.n}
-              initial={{ opacity: 0, y: 24 }}
+              key={m.label}
+              initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true, margin: "-10%" }}
-              transition={{
-                duration: 0.5,
-                delay: i * 0.08,
-                ease: [0.2, 0.7, 0.2, 1],
-              }}
-              whileHover={{ y: -4 }}
-              className="solution-card group relative flex flex-col overflow-hidden rounded-3xl border border-white/10 bg-navy-800/70 p-7 shadow-[0_4px_30px_rgba(0,0,0,0.25)] transition-all hover:border-mint-soft/50 hover:bg-navy-800"
+              transition={{ duration: 0.8, delay: i * 0.08, ease: [0.16, 1, 0.3, 1] }}
+              className={`py-12 md:py-16 ${i === 1 ? "border-t border-line md:border-l md:border-t-0 md:pl-12" : "md:pr-12"}`}
             >
-              <div
-                aria-hidden="true"
-                className={`pointer-events-none absolute inset-0 bg-gradient-to-br ${v.gradient} opacity-60`}
-              />
-              <div className="relative flex items-start justify-between">
-                <span className="grid h-14 w-14 place-items-center rounded-2xl bg-white text-navy-900 ring-1 ring-mint-soft/50 transition-transform group-hover:scale-110">
-                  <v.Icon size={24} strokeWidth={2.2} />
-                </span>
-                <span className="rounded-full border border-white/20 bg-white/10 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-white">
-                  {v.n}
-                </span>
-              </div>
-              <h3 className="relative mt-6 text-xl font-bold leading-tight text-white">
-                {v.k}
-              </h3>
-              <p className="relative mt-2 text-sm leading-relaxed text-white/70">
-                {v.d}
+              <Eyebrow index={`0${i + 1}`}>{m.label}</Eyebrow>
+              <p className="mt-8 max-w-[30ch] text-balance text-[clamp(1.5rem,2.6vw,2.25rem)] font-medium leading-[1.2] tracking-[-0.02em] text-primary">
+                {m.body}
               </p>
             </motion.article>
           ))}
         </div>
       </section>
 
+      {/* ── Values ─────────────────────────────────────── */}
+      <section className="mt-12 border-y border-line bg-navy-800 py-24 md:py-32">
+        <div className="mx-auto grid max-w-[90rem] gap-14 px-5 sm:px-8 md:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)] lg:px-12">
+          <div className="md:sticky md:top-32 md:self-start">
+            <Eyebrow index="03">Values</Eyebrow>
+            <h2 className="mt-6 max-w-[16ch] text-balance text-[clamp(2.1rem,4.4vw,3.6rem)] font-semibold leading-[1.02] tracking-[-0.035em] text-primary">
+              Three principles behind every procurement decision.
+            </h2>
+          </div>
+          <ValuesList items={values} />
+        </div>
+      </section>
+
       {/* ── Leadership ─────────────────────────────────── */}
-      <section className="mx-auto mt-24 max-w-7xl px-5 lg:px-8">
+      <section className="mx-auto mt-24 max-w-[90rem] px-5 sm:px-8 md:mt-36 lg:px-12">
+        <Eyebrow index="04">Leadership</Eyebrow>
         <motion.div
           initial={{ opacity: 0, y: 24 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true, margin: "-10%" }}
-          transition={{ duration: 0.6, ease: [0.2, 0.7, 0.2, 1] }}
-          className="relative overflow-hidden rounded-3xl border border-white/10 bg-navy-800/70 shadow-[0_4px_30px_rgba(0,0,0,0.25)]"
+          transition={{ duration: 0.9, ease: [0.16, 1, 0.3, 1] }}
+          className="mt-8 grid overflow-hidden rounded-[24px] border border-line bg-surface md:grid-cols-[1fr_1.1fr]"
         >
-          <div
-            aria-hidden="true"
-            className="pointer-events-none absolute inset-0 bg-gradient-to-br from-cyan-500/15 via-mint/10 to-transparent opacity-60"
-          />
-          <div className="relative grid gap-0 md:grid-cols-[1fr_1.2fr]">
-            {/* Portrait + per-person LinkedIn pills */}
-            <div className="relative isolate aspect-[4/5] overflow-hidden md:aspect-auto md:min-h-[560px]">
-              <img
-                src="/jassim-alkajek.jpg"
-                alt="QuipMed leadership team at the Convention Gate"
-                className="absolute inset-0 h-full w-full object-cover object-center saturate-[1.05] contrast-[1.02]"
-                loading="lazy"
-              />
-              <div
-                aria-hidden="true"
-                className="pointer-events-none absolute inset-0 bg-gradient-to-t from-navy-900/70 via-transparent to-navy-900/30"
-              />
-              <div
-                aria-hidden="true"
-                className="pointer-events-none absolute inset-y-0 right-0 hidden w-24 bg-gradient-to-r from-transparent to-navy-800 md:block"
-              />
-              <div
-                aria-hidden="true"
-                className="pointer-events-none absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-navy-800 to-transparent md:hidden"
-              />
+          {/* Portrait + per-person LinkedIn pills */}
+          <div className="relative isolate aspect-[4/5] overflow-hidden md:aspect-auto md:min-h-[600px]">
+            <img
+              src="/jassim-alkajek.jpg"
+              alt="QuipMed leadership team: Eng. Jassim Al Kajek, Mr. Jassim Bin Essa and Eng. Mohamed Rajab"
+              className="absolute inset-0 h-full w-full object-cover object-center"
+              loading="lazy"
+            />
+            <div
+              aria-hidden="true"
+              className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/45 via-transparent to-black/20"
+            />
+            {LEADERSHIP_PEOPLE.map((p) => (
+              <a
+                key={p.name}
+                href={p.linkedin}
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label={`Open ${p.name}'s LinkedIn profile`}
+                className="leadership-pill group/pill absolute -translate-x-1/2 inline-flex items-center rounded-full border backdrop-blur-md gap-0 p-1 md:gap-2 md:px-2.5 md:py-1.5 md:max-w-[200px]"
+                style={{ left: `${p.x}%`, top: `${p.y}%` }}
+              >
+                <span className="leadership-pill-icon grid h-6 w-6 shrink-0 place-items-center rounded-full transition-transform group-hover/pill:scale-110">
+                  <Linkedin size={12} strokeWidth={2.6} />
+                </span>
+                <span className="leadership-pill-text hidden truncate text-[11px] font-semibold leading-tight md:inline">
+                  {p.name}
+                </span>
+              </a>
+            ))}
+          </div>
 
-              {/* Floating LinkedIn pills above each person's head */}
-              {LEADERSHIP_PEOPLE.map((p) => (
+          {/* Mobile-only name strip */}
+          <ul className="flex flex-wrap items-center gap-2 border-t border-line p-4 md:hidden">
+            {LEADERSHIP_PEOPLE.map((p) => (
+              <li key={`m-${p.name}`}>
                 <a
-                  key={p.name}
                   href={p.linkedin}
                   target="_blank"
                   rel="noopener noreferrer"
-                  aria-label={`Open ${p.name}'s LinkedIn profile`}
-                  className="leadership-pill group/pill absolute -translate-x-1/2 inline-flex items-center rounded-full border backdrop-blur-md gap-0 p-1 md:gap-2 md:px-2.5 md:py-1.5 md:max-w-[200px]"
-                  style={{ left: `${p.x}%`, top: `${p.y}%` }}
+                  className="leadership-pill inline-flex items-center gap-2 rounded-full border px-2.5 py-1.5"
                 >
-                  <span className="leadership-pill-icon grid h-6 w-6 shrink-0 place-items-center rounded-full transition-transform group-hover/pill:scale-110">
-                    <Linkedin size={12} strokeWidth={2.6} />
+                  <span className="leadership-pill-icon grid h-5 w-5 shrink-0 place-items-center rounded-full">
+                    <Linkedin size={11} strokeWidth={2.6} />
                   </span>
-                  <span className="leadership-pill-text hidden truncate text-[11px] font-semibold leading-tight md:inline">
-                    {p.name}
-                  </span>
+                  <span className="leadership-pill-text text-[11px] font-semibold leading-tight">{p.name}</span>
                 </a>
+              </li>
+            ))}
+          </ul>
+
+          <div className="flex flex-col p-7 md:p-12 lg:p-14">
+            <h2 className="text-balance text-[clamp(1.75rem,3.2vw,2.75rem)] font-semibold leading-[1.05] tracking-[-0.03em] text-primary">
+              Operations led by Eng.&nbsp;Jassim Al&nbsp;Kajek.
+            </h2>
+            <p className="mt-6 max-w-[56ch] text-[16px] leading-relaxed text-slate-mid">
+              A biomedical engineer with hands-on experience across medical equipment
+              procurement, installation and after-sales service in Kuwait. Eng. Jassim leads
+              QuipMed&rsquo;s operations end to end, from manufacturer qualification and tender
+              management to on-site commissioning with hospital biomedical teams.
+            </p>
+
+            <dl className="mt-10 grid grid-cols-1 border-t border-line sm:grid-cols-2">
+              {[
+                { k: "Background", v: "Biomedical engineering" },
+                { k: "Based in", v: "Kuwait City · GCC" },
+                { k: "Focus areas", v: "Imaging · Surgical · CSSD" },
+                { k: "Role", v: "Operations & partnerships" },
+              ].map((r, i) => (
+                <div
+                  key={r.k}
+                  className={`border-b border-line py-5 ${i % 2 === 1 ? "sm:border-l sm:pl-6" : "sm:pr-6"}`}
+                >
+                  <dt className="font-mono text-[10.5px] uppercase tracking-[0.14em] text-slate-mid">{r.k}</dt>
+                  <dd className="mt-1.5 text-[15px] font-medium text-primary">{r.v}</dd>
+                </div>
               ))}
-            </div>
+            </dl>
 
-            {/* Mobile-only name strip — the in-photo pills collapse to icons
-                on small screens, so we surface the names here. */}
-            <ul className="flex flex-wrap items-center gap-2 border-t border-white/10 bg-navy-900/40 p-4 md:hidden">
-              {LEADERSHIP_PEOPLE.map((p) => (
-                <li key={`m-${p.name}`}>
-                  <a
-                    href={p.linkedin}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="leadership-pill inline-flex items-center gap-2 rounded-full border px-2.5 py-1.5"
-                  >
-                    <span className="leadership-pill-icon grid h-5 w-5 shrink-0 place-items-center rounded-full">
-                      <Linkedin size={11} strokeWidth={2.6} />
-                    </span>
-                    <span className="leadership-pill-text text-[11px] font-semibold leading-tight">
-                      {p.name}
-                    </span>
-                  </a>
-                </li>
-              ))}
-            </ul>
-
-            {/* Info */}
-            <div className="relative p-8 md:p-12">
-              <span className="inline-flex items-center gap-2 rounded-full border border-mint/30 bg-mint/10 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.22em] text-mint-soft">
-                <Sparkles size={12} /> Leadership
-              </span>
-              <h2 className="mt-4 whitespace-nowrap font-bold tracking-tight text-white text-[clamp(1.1rem,3vw,2.25rem)] leading-tight">
-                Operations led by{" "}
-                <span className="text-mint-soft">Eng. Jassim Al Kajek</span>.
-              </h2>
-              <p className="mt-5 max-w-xl text-white/70">
-                A biomedical engineer with hands-on experience across medical
-                equipment procurement, installation and after-sales service in
-                Kuwait. Eng. Jassim leads QuipMed&rsquo;s operations end-to-end
-                — from manufacturer qualification and tender management to
-                on-site commissioning with hospital biomedical teams.
-              </p>
-
-              {/* Highlight badges */}
-              <ul className="mt-6 grid gap-3 sm:grid-cols-2">
-                <li className="flex items-start gap-3 rounded-2xl border border-white/10 bg-white/[0.04] p-3">
-                  <span className="leadership-icon-tile grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-white text-navy-900 ring-1 ring-mint-soft/50">
-                    <BadgeCheck size={16} strokeWidth={2.4} />
-                  </span>
-                  <div>
-                    <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-mint-soft">
-                      Background
-                    </p>
-                    <p className="text-sm font-medium text-white">
-                      Biomedical Engineering
-                    </p>
-                  </div>
-                </li>
-                <li className="flex items-start gap-3 rounded-2xl border border-white/10 bg-white/[0.04] p-3">
-                  <span className="leadership-icon-tile grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-white text-navy-900 ring-1 ring-mint-soft/50">
-                    <MapPin size={16} strokeWidth={2.4} />
-                  </span>
-                  <div>
-                    <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-mint-soft">
-                      Based in
-                    </p>
-                    <p className="text-sm font-medium text-white">
-                      Kuwait City · GCC region
-                    </p>
-                  </div>
-                </li>
-                <li className="flex items-start gap-3 rounded-2xl border border-white/10 bg-white/[0.04] p-3">
-                  <span className="leadership-icon-tile grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-white text-navy-900 ring-1 ring-mint-soft/50">
-                    <ShieldCheck size={16} strokeWidth={2.4} />
-                  </span>
-                  <div>
-                    <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-mint-soft">
-                      Focus areas
-                    </p>
-                    <p className="text-sm font-medium text-white">
-                      Imaging · Surgical · CSSD
-                    </p>
-                  </div>
-                </li>
-                <li className="flex items-start gap-3 rounded-2xl border border-white/10 bg-white/[0.04] p-3">
-                  <span className="leadership-icon-tile grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-white text-navy-900 ring-1 ring-mint-soft/50">
-                    <Briefcase size={16} strokeWidth={2.4} />
-                  </span>
-                  <div>
-                    <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-mint-soft">
-                      Role
-                    </p>
-                    <p className="text-sm font-medium text-white">
-                      Operations & Partnerships
-                    </p>
-                  </div>
-                </li>
-              </ul>
-
-              {/* CTAs */}
-              <div className="mt-7 flex flex-wrap items-center gap-3">
-                <a
-                  href="mailto:eng.jassim@quipmed.co"
-                  className="inline-flex items-center gap-2 rounded-full bg-mint px-5 py-2.5 text-sm font-semibold text-navy-900 transition-all hover:bg-mint-soft hover:shadow-neon"
-                >
-                  <Mail size={14} strokeWidth={2.4} />
-                  eng.jassim@quipmed.co
-                </a>
-                <a
-                  href="https://www.linkedin.com/in/jassim-alkajek-18947584"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/5 px-5 py-2.5 text-sm font-semibold text-white transition-all hover:border-mint-soft/50 hover:bg-white/10"
-                >
-                  <Linkedin size={14} strokeWidth={2.4} />
-                  LinkedIn
-                </a>
-                <Link
-                  to="/contact"
-                  className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/5 px-5 py-2.5 text-sm font-semibold text-white transition-all hover:border-mint-soft/50 hover:bg-white/10"
-                >
-                  Meet the team
-                  <ArrowRight size={14} />
-                </Link>
-              </div>
+            <div className="mt-auto flex flex-wrap items-center gap-x-8 gap-y-4 pt-10">
+              <PrimaryButton href="mailto:eng.jassim@quipmed.co">Email Eng. Jassim</PrimaryButton>
+              <TextLink href="https://www.linkedin.com/in/jassim-alkajek-18947584" external>
+                LinkedIn
+              </TextLink>
             </div>
           </div>
         </motion.div>
       </section>
 
       {/* ── Specialities ───────────────────────────────── */}
-      <section className="mx-auto mt-24 max-w-7xl px-5 lg:px-8">
-        <header>
-          <h2 className="text-[10px] font-semibold uppercase tracking-[0.24em] text-mint">
-            Specialities
-          </h2>
-          <p className="mt-3 max-w-2xl text-3xl font-bold tracking-tight text-primary md:text-4xl">
-            {departments.length} clinical domain{departments.length === 1 ? "" : "s"}. One trusted partner.
-          </p>
-        </header>
-        <div className="mt-10 grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {departments.map((d, i) => {
-            const count = products.filter((p) => p.department_id === d.id).length;
-            const meta = getDepartmentMeta(d.slug, d.name);
-            const Icon = meta.Icon;
-            return (
-              <motion.div
-                key={d.id}
-                initial={{ opacity: 0, y: 24 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true, margin: "-10%" }}
-                transition={{
-                  duration: 0.5,
-                  delay: (i % 3) * 0.08,
-                  ease: [0.2, 0.7, 0.2, 1],
-                }}
-                whileHover={{ y: -4 }}
-                className="solution-card group relative flex flex-col overflow-hidden rounded-3xl border border-white/10 bg-navy-800/70 p-7 shadow-[0_4px_30px_rgba(0,0,0,0.25)] transition-all hover:border-mint-soft/50 hover:bg-navy-800"
-              >
-                <div
-                  aria-hidden="true"
-                  className={`pointer-events-none absolute inset-0 bg-gradient-to-br ${meta.gradient} opacity-60`}
-                />
-                <div className="relative flex items-start justify-between">
-                  <span className="grid h-14 w-14 place-items-center rounded-2xl bg-white text-navy-900 ring-1 ring-mint-soft/50 transition-transform group-hover:scale-110">
-                    <Icon size={24} strokeWidth={2.2} />
-                  </span>
-                  <span className="rounded-full border border-white/20 bg-white/10 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-white">
-                    {String(i + 1).padStart(2, "0")}
-                  </span>
-                </div>
-                <h3 className="relative mt-6 text-xl font-bold leading-tight text-white">
-                  {d.name}
-                </h3>
-                <p className="relative mt-2 text-sm text-white/70">
-                  {meta.tagline}
-                </p>
-                <div className="relative mt-6 flex items-center justify-between border-t border-white/10 pt-4 text-xs">
-                  <span className="font-semibold text-mint-soft">
-                    {count}{" "}
-                    <span className="font-normal text-white/60">
-                      product line{count === 1 ? "" : "s"}
-                    </span>
-                  </span>
-                  <Link
-                    to={`/products?department=${d.slug}`}
-                    className="inline-flex items-center gap-1 font-semibold text-white transition-colors hover:text-mint-soft"
-                  >
-                    Explore
-                    <ArrowRight
-                      size={12}
-                      className="transition-transform group-hover:translate-x-0.5"
-                    />
-                  </Link>
-                </div>
-              </motion.div>
-            );
-          })}
+      <section className="mx-auto mt-24 max-w-[90rem] px-5 sm:px-8 md:mt-36 lg:px-12">
+        <div className="mb-12 flex flex-wrap items-end justify-between gap-6 md:mb-16">
+          <div>
+            <Eyebrow index="05">Specialities</Eyebrow>
+            <h2 className="mt-6 max-w-[18ch] text-balance text-[clamp(2.1rem,4.4vw,3.6rem)] font-semibold leading-[1.02] tracking-[-0.035em] text-primary">
+              {departments.length} clinical domain{departments.length === 1 ? "" : "s"}. One trusted partner.
+            </h2>
+          </div>
+          <TextLink to="/products">Full catalogue</TextLink>
         </div>
+        <DepartmentIndex departments={departments} products={products} showSubcategories={false} />
       </section>
 
       {/* ── CTA ────────────────────────────────────────── */}
-      <section className="mx-auto mt-24 max-w-5xl px-5 lg:px-8">
-        <div className="relative overflow-hidden rounded-3xl border border-white/5 bg-white/[0.02] p-10 text-center md:p-14">
-          <div className="pointer-events-none absolute inset-0 bg-grid-dots-dark [background-size:24px_24px] opacity-60" />
-          <div className="relative">
-            <h2 className="text-3xl font-bold tracking-tight text-primary md:text-4xl">
+      <section className="mx-auto mt-24 max-w-[90rem] px-5 sm:px-8 md:mt-36 lg:px-12">
+        <div className="grid gap-10 rounded-[24px] bg-primary px-7 py-12 text-[var(--bg-primary)] md:grid-cols-[minmax(0,1fr)_auto] md:items-end md:px-14 md:py-16">
+          <div>
+            <h2 className="max-w-[18ch] text-balance text-[clamp(2rem,4vw,3.4rem)] font-semibold leading-[1.02] tracking-[-0.035em]">
               Ready to equip your facility?
             </h2>
-            <p className="mx-auto mt-4 max-w-xl text-primary/65">
-              Tell us about your clinical requirements — we&rsquo;ll match them
-              with the right brand partner and handle procurement end-to-end.
+            <p className="mt-5 max-w-[50ch] text-[16px] leading-relaxed opacity-70">
+              Tell us about your clinical requirements. We&rsquo;ll match them with the right
+              manufacturer and handle procurement end to end.
             </p>
-            <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
-              <Link
-                to="/contact"
-                className="inline-flex items-center gap-2 rounded-full bg-mint px-6 py-3 text-sm font-semibold text-primary hover:bg-mint-soft hover:shadow-neon"
-              >
-                Start a conversation
-                <ArrowRight size={14} />
-              </Link>
-              <Link
-                to="/products"
-                className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/5 px-6 py-3 text-sm font-semibold text-primary hover:bg-white/10"
-              >
-                Browse the catalogue
-              </Link>
-            </div>
           </div>
+          <Link
+            to="/contact"
+            className="inline-flex items-center justify-center gap-2 rounded-full bg-[var(--bg-primary)] px-7 py-3.5 text-sm font-semibold text-primary transition-colors hover:bg-mint-soft hover:text-white"
+          >
+            Start a conversation
+          </Link>
         </div>
       </section>
     </div>
@@ -485,92 +256,3 @@ const LEADERSHIP_PEOPLE = [
     y: 10,
   },
 ];
-
-function MVCard({
-  icon,
-  label,
-  body,
-  n,
-  gradient,
-}: {
-  icon: React.ReactNode;
-  label: string;
-  body: string;
-  n: string;
-  gradient: string;
-}) {
-  return (
-    <motion.article
-      initial={{ opacity: 0, y: 24 }}
-      whileInView={{ opacity: 1, y: 0 }}
-      viewport={{ once: true, margin: "-10%" }}
-      transition={{ duration: 0.5, ease: [0.2, 0.7, 0.2, 1] }}
-      whileHover={{ y: -4 }}
-      className="solution-card group relative flex flex-col overflow-hidden rounded-3xl border border-white/10 bg-navy-800/70 p-7 shadow-[0_4px_30px_rgba(0,0,0,0.25)] transition-all hover:border-mint-soft/50 hover:bg-navy-800"
-    >
-      <div
-        aria-hidden="true"
-        className={`pointer-events-none absolute inset-0 bg-gradient-to-br ${gradient} opacity-60`}
-      />
-      <div className="relative flex items-start justify-between">
-        <span className="grid h-14 w-14 place-items-center rounded-2xl bg-white text-navy-900 ring-1 ring-mint-soft/50 transition-transform group-hover:scale-110">
-          {icon}
-        </span>
-        <span className="rounded-full border border-white/20 bg-white/10 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-white">
-          {n}
-        </span>
-      </div>
-      <h3 className="relative mt-6 text-xl font-bold leading-tight text-white">
-        {label}
-      </h3>
-      <p className="relative mt-2 text-sm leading-relaxed text-white/70">
-        {body}
-      </p>
-    </motion.article>
-  );
-}
-
-function getDepartmentMeta(slug: string, name: string) {
-  const s = (slug || name || "").toLowerCase();
-  if (s.includes("radio") || s.includes("imag"))
-    return {
-      Icon: Scan,
-      gradient: "from-cyan-500/20 via-blue-500/10 to-transparent",
-      tagline: "MRI, CT, X-ray, ultrasound and mammography systems.",
-    };
-  if (s.includes("rehab") || s.includes("bed") || s.includes("physio"))
-    return {
-      Icon: Bed,
-      gradient: "from-emerald-500/20 via-teal-500/10 to-transparent",
-      tagline: "Hospital beds, physiotherapy and rehabilitation.",
-    };
-  if (s.includes("steril") || s.includes("infection") || s.includes("cssd"))
-    return {
-      Icon: ShieldCheck,
-      gradient: "from-violet-500/20 via-fuchsia-500/10 to-transparent",
-      tagline: "Autoclaves, disinfection and CSSD lines.",
-    };
-  if (s.includes("surg") || s.includes("operat") || s.includes("endo"))
-    return {
-      Icon: Syringe,
-      gradient: "from-rose-500/20 via-orange-500/10 to-transparent",
-      tagline: "OR tables, lights, lasers and endoscopy.",
-    };
-  if (s.includes("primary") || s.includes("general") || s.includes("care"))
-    return {
-      Icon: Stethoscope,
-      gradient: "from-mint/20 via-cyan-neon/10 to-transparent",
-      tagline: "Wound care, orthopedics and CGM.",
-    };
-  if (s.includes("cardio") || s.includes("monitor") || s.includes("pulmo"))
-    return {
-      Icon: HeartPulse,
-      gradient: "from-red-500/20 via-pink-500/10 to-transparent",
-      tagline: "Patient monitors, ECG and pulmonary function.",
-    };
-  return {
-    Icon: Microscope,
-    gradient: "from-mint/20 via-cyan-neon/10 to-transparent",
-    tagline: "Specialty medical equipment.",
-  };
-}

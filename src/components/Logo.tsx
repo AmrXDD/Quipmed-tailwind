@@ -19,7 +19,9 @@ export default function Logo({ className, tone = "light" }: LogoProps) {
     >
       <img
         src={logoSrc}
-        alt="QuipMed Logo"
+        alt="QuipMed"
+        width={1078}
+        height={551}
         className="h-full w-auto object-contain"
       />
     </span>

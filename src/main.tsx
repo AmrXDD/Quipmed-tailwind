@@ -2,6 +2,7 @@ import React from "react";
 import ReactDOM from "react-dom/client";
 import { BrowserRouter } from "react-router-dom";
 import App from "./App";
+import { markPreloader } from "./lib/preloader";
 import "./styles/globals.css";
 
 ReactDOM.createRoot(document.getElementById("root") as HTMLElement).render(
@@ -12,10 +13,8 @@ ReactDOM.createRoot(document.getElementById("root") as HTMLElement).render(
   </React.StrictMode>,
 );
 
-// Fade out the pre-React loading splash once the app has painted.
+// Tell the preloader the app has painted once fonts are in.
 requestAnimationFrame(() => {
-  const splash = document.getElementById("app-splash");
-  if (!splash) return;
-  splash.classList.add("app-splash--hidden");
-  setTimeout(() => splash.remove(), 600);
+  const fonts = (document as Document & { fonts?: FontFaceSet }).fonts;
+  (fonts ? fonts.ready : Promise.resolve()).then(() => markPreloader("app"));
 });

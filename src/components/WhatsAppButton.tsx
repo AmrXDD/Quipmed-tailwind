@@ -6,11 +6,11 @@ export default function WhatsAppButton() {
     <a
       href={WHATSAPP_HREF}
       target="_blank"
-      rel="noreferrer"
+      rel="noopener noreferrer"
       aria-label="Chat with QuipMed on WhatsApp"
-      className="group fixed bottom-5 right-5 z-[60] flex h-14 w-14 items-center justify-center rounded-full bg-[#25D366] shadow-[0_8px_24px_rgba(37,211,102,0.45)] ring-1 ring-white/20 transition-transform hover:scale-110 md:bottom-7 md:right-7"
+      className="group fixed bottom-5 right-5 z-[60] flex items-center justify-center rounded-full bg-[#25D366] shadow-[0_10px_30px_-10px_rgba(0,0,0,0.6)] transition-transform duration-300 ease-out-expo hover:scale-105 active:scale-95 md:bottom-7 md:right-7"
+      style={{ width: 52, height: 52 }}
     >
-      <span className="absolute inset-0 -z-10 animate-ping rounded-full bg-[#25D366]/40" />
       <svg
         viewBox="0 0 32 32"
         aria-hidden="true"

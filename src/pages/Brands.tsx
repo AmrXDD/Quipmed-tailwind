@@ -1,60 +1,41 @@
-import { Handshake, Sparkles } from "lucide-react";
 import { useBrands, useProducts } from "@/hooks/useSupabase";
 import BrandLogoGrid from "@/components/BrandLogoGrid";
+import { PageHeader } from "@/components/ui/primitives";
 
 export default function Brands() {
   const { brands, loading } = useBrands();
   const { products } = useProducts();
 
   return (
-    <div className="min-h-screen bg-navy-800 pb-24 pt-32">
-      <div className="mx-auto max-w-7xl px-5 lg:px-8">
-        <header className="mb-10 flex flex-wrap items-end justify-between gap-6">
-          <div>
-            <span className="inline-flex items-center gap-2 rounded-full border border-cyan-neon/25 bg-cyan-neon/5 px-3 py-1 text-xs font-medium uppercase tracking-[0.2em] text-cyan-soft">
-              <Handshake size={12} /> Partnerships
-            </span>
-            <h1 className="mt-5 text-[clamp(2rem,4.5vw,4rem)] font-bold leading-[0.98] tracking-tight text-primary">
-              Our Brand Partners
-            </h1>
-            <p className="mt-4 max-w-2xl text-slate-mid">
-              QuipMed collaborates with {brands.length} world-class
-              medical-technology manufacturers across Europe, Asia and the
-              Americas — delivering certified innovation to Kuwaiti
-              healthcare.
+    <div className="min-h-screen bg-navy-900 pb-28 pt-36">
+      <div className="mx-auto max-w-[90rem] px-5 sm:px-8 lg:px-12">
+        <PageHeader
+          eyebrow="Manufacturers"
+          title="Our brand partners"
+          lead={`QuipMed works with ${brands.length || "leading"} medical-technology manufacturers across Europe, Asia and the Americas, bringing certified equipment to healthcare in Kuwait.`}
+          aside={
+            <p className="tnum font-mono text-[11px] uppercase tracking-[0.14em] text-slate-mid">
+              {loading
+                ? "Loading partners…"
+                : `${String(brands.length).padStart(2, "0")} brands · ${String(products.length).padStart(2, "0")} products`}
             </p>
-          </div>
-          <div className="flex shrink-0 items-center gap-2 rounded-xl border border-white/5 bg-navy-800/60 px-4 py-3 text-sm text-slate-mid">
-            <Sparkles size={14} className="text-mint" />
-            {loading
-              ? "Loading partners…"
-              : `${brands.length} brands · ${products.length} products`}
-          </div>
-        </header>
+          }
+        />
 
-        <section>
-          <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
-            <div>
-              <h3 className="text-[10px] font-semibold uppercase tracking-[0.24em] text-mint-soft">
-                Brand Partners
-              </h3>
-              <p className="mt-2 text-2xl font-bold text-primary md:text-3xl">
-                Trusted manufacturers, one click away.
-              </p>
-            </div>
-          </div>
+        <section className="mt-12" aria-label="Brand logos">
           {loading ? (
-            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">
+            <div className="grid animate-pulse grid-cols-2 overflow-hidden rounded-[20px] bg-white/[0.04] sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6">
               {Array.from({ length: 12 }).map((_, i) => (
-                <div
-                  key={`sk-${i}`}
-                  className="h-32 animate-pulse rounded-xl border border-white/10 bg-white/[0.03]"
-                />
+                <div key={`sk-${i}`} className="h-32 border-b border-r border-line md:h-36" />
               ))}
             </div>
           ) : (
             <BrandLogoGrid brands={brands} />
           )}
+          <p className="mt-6 max-w-[70ch] text-xs leading-relaxed text-slate-mid">
+            Brand names and logos are trademarks of their respective owners and are shown to
+            identify the products we supply. Logos link to each manufacturer&rsquo;s own website.
+          </p>
         </section>
       </div>
     </div>

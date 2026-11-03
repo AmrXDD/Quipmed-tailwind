@@ -1,531 +1,272 @@
-import { useEffect, useRef } from "react";
-import { motion } from "framer-motion";
-import { Link } from "react-router-dom";
+import { lazy, Suspense, useCallback, useEffect, useRef } from "react";
 import { gsap } from "gsap";
 import SplitType from "split-type";
-import {
-  Activity,
-  ShieldCheck,
-  Headset,
-  ArrowRight,
-  Sparkles,
-  Scan,
-  Stethoscope,
-  Syringe,
-  Microscope,
-  HeartPulse,
-  Bed,
-} from "lucide-react";
-import ParticleCanvas from "@/components/ParticleCanvas";
-import FloatingTag from "@/components/FloatingTag";
 import BrandLogoGrid from "@/components/BrandLogoGrid";
+import DepartmentIndex from "@/components/DepartmentIndex";
+import ValuesList from "@/components/ValuesList";
+import { Eyebrow, PrimaryButton, TextLink, useInViewOnce } from "@/components/ui/primitives";
 import { useCompanyInfo, useBrands, useProducts, useDepartments } from "@/hooks/useSupabase";
+import { markPreloader, usePreloaderLeaving } from "@/lib/preloader";
+import { useThemeMode } from "@/lib/theme";
+
+const BrainScan = lazy(() => import("@/components/BrainScan"));
+
+const VALUES = [
+  {
+    k: "Reliable",
+    d: "Time-tested equipment, validated supply chains and certified manufacturers. We only distribute what we would put our own name behind.",
+  },
+  {
+    k: "Modern",
+    d: "From 4K endoscopy to immersive VR therapy, we bring in the technologies that will shape the next decade of clinical practice in Kuwait.",
+  },
+  {
+    k: "Strong",
+    d: "Long-term relationships with Neusoft, Allengers, Tuttnauer, EMS Swiss and more, supported by a service team on the ground in Kuwait.",
+  },
+];
 
 export default function Home() {
   const c = useCompanyInfo();
   const { brands } = useBrands();
   const { products } = useProducts();
   const { departments } = useDepartments();
+  const theme = useThemeMode();
+  const leaving = usePreloaderLeaving();
 
-  const subsByDept = (() => {
-    const map = new Map<string, string[]>();
-    for (const d of departments) map.set(d.id, []);
-    for (const p of products) {
-      if (!p.department_id || !p.subcategory) continue;
-      const arr = map.get(p.department_id);
-      if (!arr) continue;
-      if (!arr.includes(p.subcategory)) arr.push(p.subcategory);
-    }
-    for (const arr of map.values()) arr.sort();
-    return map;
-  })();
+  const titleRef = useRef<HTMLHeadingElement>(null);
+  const introRef = useRef<HTMLDivElement>(null);
+  const sliceRef = useRef<HTMLSpanElement>(null);
+  const depthRef = useRef<HTMLSpanElement>(null);
 
-  const sloganRef = useRef<HTMLHeadingElement>(null);
-  const subRef = useRef<HTMLParagraphElement>(null);
+  // Headline: lines rise out of a mask once the preloader starts leaving.
+  useEffect(() => {
+    const el = titleRef.current;
+    if (!el) return;
+    if (window.__quipmedPreloader?.done) return; // client-side navigation: no intro
+    gsap.set(introRef.current?.children ?? [], { opacity: 0, y: 18 });
+    let split: SplitType | null = null;
+    let cancelled = false;
+    // Split after fonts load so line breaks match the final layout.
+    document.fonts.ready.then(() => {
+      if (cancelled) return;
+      split = new SplitType(el, { types: "lines,words", tagName: "span" });
+      gsap.set(split.words, { yPercent: 110 });
+    });
+    return () => {
+      cancelled = true;
+      split?.revert();
+    };
+  }, []);
 
   useEffect(() => {
-    if (!sloganRef.current) return;
-    const split = new SplitType(sloganRef.current, {
-      types: "lines,words,chars",
-      tagName: "span",
-    });
-    gsap.set(split.chars, { y: "110%", opacity: 0 });
-    const tl = gsap.timeline();
-    tl.to(split.chars, {
-      y: "0%",
-      opacity: 1,
-      stagger: 0.02,
-      duration: 0.9,
-      ease: "expo.out",
-      delay: 0.15,
-    });
-    if (subRef.current) {
-      tl.from(
-        subRef.current,
-        { y: 24, duration: 0.7, ease: "expo.out", clearProps: "transform" },
-        "-=0.5",
+    if (!leaving || !titleRef.current) return;
+    if (!titleRef.current.querySelector(".word")) {
+      gsap.set(introRef.current?.children ?? [], { opacity: 1, y: 0, clearProps: "transform" });
+      return;
+    }
+    const words = titleRef.current.querySelectorAll(".word");
+    const tl = gsap.timeline({ delay: 0.25 });
+    tl.to(words, { yPercent: 0, duration: 1.15, ease: "expo.out", stagger: 0.06 });
+    if (introRef.current) {
+      tl.to(
+        introRef.current.children,
+        { opacity: 1, y: 0, duration: 0.9, ease: "expo.out", stagger: 0.08, clearProps: "transform" },
+        "-=0.8",
       );
     }
     return () => {
-      split.revert();
+      tl.kill();
     };
+  }, [leaving]);
+
+  const onBrainReady = useCallback(() => markPreloader("hero"), []);
+
+  // CT readout, written straight to the DOM every frame.
+  const onScan = useCallback((p: number) => {
+    const slice = Math.round(p * 159) + 1;
+    if (sliceRef.current) sliceRef.current.textContent = String(slice).padStart(3, "0");
+    if (depthRef.current)
+      depthRef.current.textContent = `${(64 - p * 128).toFixed(1).padStart(5, " ")} mm`;
   }, []);
+
+  const mission = useInViewOnce<HTMLQuoteElement>();
 
   return (
     <>
       {/* ════════════════════════════════════════════════════════
-          HERO — Solid navy background, content-first
+          HERO
           ──────────────────────────────────────────────────────── */}
-      <section
-        className="hero-surface relative isolate flex min-h-[100svh] w-full overflow-hidden"
-      >
-        {/* subtle dotted grid for texture */}
-        <div
-          aria-hidden="true"
-          className="pointer-events-none absolute inset-0 bg-grid-dots-dark [background-size:28px_28px] opacity-40"
-        />
-
-        {/* ── Content ──────────────────────────────────────── */}
-        <div className="relative z-10 flex w-full flex-col justify-center pt-28 md:w-[55%] lg:w-[52%]">
-          <div className="px-6 sm:px-10 md:px-14 lg:pl-20 lg:pr-8">
-            <motion.span
-              initial={{ opacity: 0, x: -12 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: 0.2, duration: 0.6 }}
-              className="mb-6 inline-flex items-center gap-2 rounded-full border border-mint-soft/40 bg-white/5 px-3 py-1 text-xs font-medium uppercase tracking-[0.18em] text-mint-soft"
-            >
-              <Sparkles size={12} />
-              {c.country} · {c.city}
-            </motion.span>
-
+      <section className="hero-surface relative isolate overflow-hidden">
+        <div className="mx-auto grid min-h-[100svh] max-w-[90rem] grid-cols-1 content-center items-center gap-y-6 px-5 pb-40 pt-28 sm:px-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.08fr)] lg:gap-x-4 lg:px-12 lg:pb-36">
+          <div className="relative z-10">
             <h1
-              ref={sloganRef}
-              className="text-[clamp(2.5rem,6vw,5.5rem)] font-bold leading-[1.08] tracking-tight text-white pb-2"
-              style={{ paddingBottom: "0.15em" }}
+              ref={titleRef}
+              className="text-[clamp(3rem,7.2vw,7rem)] font-semibold leading-[0.9] tracking-[-0.045em] text-primary [&_.line]:-mb-[0.2em] [&_.line]:overflow-hidden [&_.line]:pb-[0.2em] [&_.word]:!overflow-visible [&_.word]:!pb-0 [&_.word]:!leading-[0.9]"
             >
-              Leading Medical <br />
-              <span className="relative inline-block">
-                Innovation
-                <span className="text-mint-soft">.</span>
-              </span>
+              Leading medical innovation.
             </h1>
 
-            <p
-              ref={subRef}
-              className="mt-6 max-w-xl text-base leading-relaxed text-white sm:text-lg"
-            >
-              {c.about}
-            </p>
-
-            <motion.div
-              initial={{ opacity: 0, y: 16 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 1.1, duration: 0.6 }}
-              className="mt-9 flex flex-wrap items-center gap-3"
-            >
-              <Link
-                to="/products"
-                className="group inline-flex items-center gap-2 rounded-full bg-mint-soft px-6 py-3 text-sm font-semibold text-navy-900 transition-all hover:bg-white hover:shadow-neon"
-              >
-                Explore Products
-                <ArrowRight
-                  size={16}
-                  className="transition-transform group-hover:translate-x-1"
-                />
-              </Link>
-              <Link
-                to="/contact"
-                className="inline-flex items-center gap-2 rounded-full border border-white/25 bg-white/5 px-6 py-3 text-sm font-semibold text-white backdrop-blur-sm transition-all hover:border-mint-soft/60 hover:bg-white/10"
-              >
-                Partner with us
-              </Link>
-            </motion.div>
-
-            <motion.dl
-              initial={{ opacity: 0, y: 24 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 1.3, duration: 0.6 }}
-              className="mt-12 grid max-w-lg grid-cols-3 gap-6 border-t border-white/10 pt-6"
-            >
-              <div>
-                <dt className="text-[10px] font-medium uppercase tracking-[0.2em] text-white/60">
-                  Brand Partners
-                </dt>
-                <dd className="mt-1 font-display text-3xl font-bold text-white">
-                  {brands.length}
-                  <span className="text-mint-soft">+</span>
-                </dd>
+            <div ref={introRef}>
+              <p className="mt-8 max-w-[44ch] text-pretty text-[17px] leading-relaxed text-slate-mid sm:text-lg">
+                {c.about}
+              </p>
+              <div className="mt-10 flex flex-wrap items-center gap-x-8 gap-y-4">
+                <PrimaryButton to="/products">Explore products</PrimaryButton>
+                <TextLink to="/contact">Partner with us</TextLink>
               </div>
-              <div>
-                <dt className="text-[10px] font-medium uppercase tracking-[0.2em] text-white/60">
-                  Product Lines
-                </dt>
-                <dd className="mt-1 font-display text-3xl font-bold text-white">
-                  {products.length}
-                  <span className="text-mint-soft">+</span>
-                </dd>
-              </div>
-              <div>
-                <dt className="text-[10px] font-medium uppercase tracking-[0.2em] text-white/60">
-                  Specialities
-                </dt>
-                <dd className="mt-1 font-display text-3xl font-bold text-white">
-                  6
-                </dd>
-              </div>
-            </motion.dl>
-          </div>
-        </div>
-
-        {/* ── Right side — CT scan video ────────────────────── */}
-        <div className="relative z-0 hidden flex-1 md:block">
-          <ParticleCanvas opacity={0.25} density={11000} color="#43B649" />
-
-          {/* soft bloom behind video */}
-          <div
-            aria-hidden="true"
-            className="pointer-events-none absolute inset-0 grid place-items-center"
-          >
-            <div className="h-[60%] w-[60%] rounded-[48px] bg-gradient-to-br from-cyan-neon/10 via-mint/10 to-transparent blur-3xl" />
+            </div>
           </div>
 
-          {/* CT scan video — centered, black background keyed out via luminance-to-alpha */}
-          <div className="absolute inset-0 grid place-items-center">
-            {/* SVG filter: maps dark pixels (black bg) to transparent */}
-            <svg
+          {/* Brain under the scanner */}
+          <div className="relative mx-auto aspect-square w-full max-w-[34rem] lg:max-w-none">
+            <Suspense fallback={null}>
+              <BrainScan
+                theme={theme}
+                onReady={onBrainReady}
+                onScan={onScan}
+                className="absolute inset-0"
+                fallback={<ScanVideo />}
+              />
+            </Suspense>
+
+            {/* Readout, set like the corner annotations on a scan film */}
+            <div
               aria-hidden="true"
-              width="0"
-              height="0"
-              style={{ position: "absolute" }}
+              className="pointer-events-none absolute inset-x-2 top-2 flex justify-between font-mono text-[10.5px] uppercase tracking-[0.14em] text-slate-mid sm:inset-x-6 sm:top-6"
             >
-              <defs>
-                <filter id="ctscan-chromakey">
-                  <feColorMatrix
-                    type="matrix"
-                    values="
-                      1 0 0 0 0
-                      0 1 0 0 0
-                      0 0 1 0 0
-                      4 4 4 0 -1.2"
-                  />
-                </filter>
-              </defs>
-            </svg>
-            <div className="relative h-[min(58vh,440px)] w-[min(42vh,340px)]">
-              <video
-                src="/ct-scan.mp4"
-                autoPlay
-                loop
-                muted
-                playsInline
-                preload="auto"
-                aria-hidden="true"
-                className="h-full w-full rounded-3xl object-contain"
-                style={{
-                  background: "transparent",
-                  filter: "url(#ctscan-chromakey) contrast(1.05) brightness(1.05)",
-                }}
-              />
-
-              {/* Floating tags — absolute, positioned around the video */}
-              <FloatingTag
-                icon={<Activity size={15} strokeWidth={2.4} />}
-                label={`${brands.length}+ Brand Partners`}
-                delay={1.2}
-                className="absolute -left-28 -top-6 lg:-left-40"
-              />
-              <FloatingTag
-                icon={<ShieldCheck size={15} strokeWidth={2.4} />}
-                label="ISO Approved"
-                delay={1.35}
-                bob={5}
-                bobDuration={6}
-                className="absolute -right-24 top-6 lg:-right-36"
-              />
-              <FloatingTag
-                icon={<Headset size={15} strokeWidth={2.4} />}
-                label="24/7 Technical"
-                delay={1.5}
-                bob={7}
-                bobDuration={5.5}
-                className="absolute -left-28 bottom-4 lg:-left-44"
-              />
+              <span>CT · Axial</span>
+              <span className="tnum">
+                Slice <span ref={sliceRef} className="text-primary">001</span> / 160
+              </span>
+            </div>
+            <div
+              aria-hidden="true"
+              className="pointer-events-none absolute inset-x-2 bottom-2 flex justify-between font-mono text-[10.5px] uppercase tracking-[0.14em] text-slate-mid sm:inset-x-6 sm:bottom-6"
+            >
+              <span>
+                Z <span ref={depthRef} className="tnum whitespace-pre text-primary">64.0 mm</span>
+              </span>
+              <span>Diagnostic imaging</span>
             </div>
           </div>
         </div>
 
-        {/* ── Mobile hint ────────────────────────────────────── */}
-        <div className="absolute inset-x-0 bottom-8 z-10 flex justify-center md:hidden">
-          <div className="rounded-2xl border border-white/15 bg-navy-900/70 px-4 py-3 text-xs text-white/80 backdrop-blur">
-            ↓ Scroll to explore
-          </div>
-        </div>
-      </section>
-
-      {/* ════════════════════════════════════════════════════════
-          OUR SOLUTIONS — six clinical domains
-          ──────────────────────────────────────────────────────── */}
-      <section
-        id="solutions"
-        className="relative border-t border-white/5 bg-navy-900 py-20 md:py-28"
-      >
-        <div
-          aria-hidden="true"
-          className="pointer-events-none absolute inset-0 bg-grid-dots-dark [background-size:28px_28px] opacity-40"
-        />
-        <div className="relative mx-auto max-w-7xl px-5 lg:px-8">
-          <div className="flex flex-wrap items-end justify-between gap-6">
-            <div>
-              <h2 className="text-[10px] font-semibold uppercase tracking-[0.24em] text-mint-soft">
-                Our Solutions
-              </h2>
-              <p className="mt-3 max-w-2xl text-3xl font-bold tracking-tight text-primary md:text-5xl">
-                {departments.length}{" "}
-                <span className="text-white">
-                  Medical {departments.length === 1 ? "Department" : "Departments"}
-                </span>
-                <span className="text-mint-soft"> & Healthcare solutions provider</span>
-              </p>
-              <p className="mt-5 max-w-xl text-primary/65">
-                From first diagnosis to recovery, QuipMed curates and supplies
-                everything a modern hospital needs — vetted, certified, and
-                delivered with white-glove installation.
-              </p>
-            </div>
-            <Link
-              to="/products"
-              className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/[0.03] px-5 py-2.5 text-sm font-semibold text-primary transition-all hover:border-mint-soft/40 hover:bg-white/[0.06]"
-            >
-              See full catalogue
-              <ArrowRight size={14} />
-            </Link>
-          </div>
-
-          <div className="mt-12 grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {departments.map((d, i) => {
-              const count = products.filter((p) => p.department_id === d.id).length;
-              const meta = getDepartmentMeta(d.slug, d.name);
-              const Icon = meta.Icon;
-              return (
-                <motion.div
-                  key={d.id}
-                  initial={{ opacity: 0, y: 24 }}
-                  whileInView={{ opacity: 1, y: 0 }}
-                  viewport={{ once: true, margin: "-10%" }}
-                  transition={{
-                    duration: 0.5,
-                    delay: (i % 3) * 0.08,
-                    ease: [0.2, 0.7, 0.2, 1],
-                  }}
-                  whileHover={{ y: -4 }}
-                  className="solution-card group relative flex flex-col overflow-hidden rounded-3xl border border-white/10 bg-navy-800/70 p-7 shadow-[0_4px_30px_rgba(0,0,0,0.25)] transition-all hover:border-mint-soft/50 hover:bg-navy-800"
-                >
-                  <div
-                    aria-hidden="true"
-                    className={`pointer-events-none absolute inset-0 bg-gradient-to-br ${meta.gradient} opacity-60`}
-                  />
-                  <div className="relative flex items-start justify-between">
-                    <span className="grid h-14 w-14 place-items-center rounded-2xl bg-white text-navy-900 ring-1 ring-mint-soft/50 transition-transform group-hover:scale-110">
-                      <Icon size={24} strokeWidth={2.2} />
-                    </span>
-                    <span className="rounded-full border border-white/20 bg-white/10 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-white">
-                      {String(i + 1).padStart(2, "0")}
-                    </span>
-                  </div>
-                  <h3 className="relative mt-6 text-xl font-bold leading-tight text-white">
-                    {d.name}
-                  </h3>
-                  <p className="relative mt-2 text-sm text-white/70">
-                    {meta.tagline}
-                  </p>
-                  {(subsByDept.get(d.id) ?? []).length > 0 && (
-                    <div className="relative mt-5 -mx-1 overflow-x-auto">
-                      <div className="flex min-w-max gap-1 rounded-2xl border border-white/10 bg-white/[0.04] p-1.5">
-                        {(subsByDept.get(d.id) ?? []).map((s) => {
-                          const subCount = products.filter(
-                            (p) => p.department_id === d.id && p.subcategory === s,
-                          ).length;
-                          return (
-                            <Link
-                              key={s}
-                              to={`/products?department=${d.slug}&sub=${encodeURIComponent(s)}`}
-                              className="inline-flex items-center gap-2 whitespace-nowrap rounded-xl px-3 py-1.5 text-xs font-medium text-white/75 transition-colors hover:bg-mint hover:text-navy-900"
-                            >
-                              {s}
-                              <span className="rounded-full bg-white/10 px-1.5 py-0.5 text-[10px] font-semibold text-white/80">
-                                {subCount}
-                              </span>
-                            </Link>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  )}
-                  <div className="relative mt-6 flex items-center justify-between border-t border-white/10 pt-4 text-xs">
-                    <span className="font-semibold text-mint-soft">
-                      {count}{" "}
-                      <span className="font-normal text-white/60">
-                        product{count === 1 ? "" : "s"}
-                      </span>
-                    </span>
-                    <Link
-                      to={`/products?department=${d.slug}`}
-                      className="inline-flex items-center gap-1 font-semibold text-white transition-colors hover:text-mint-soft"
-                    >
-                      Explore
-                      <ArrowRight
-                        size={12}
-                        className="transition-transform group-hover:translate-x-0.5"
-                      />
-                    </Link>
-                  </div>
-                </motion.div>
-              );
-            })}
-          </div>
-        </div>
-      </section>
-
-      {/* ════════════════════════════════════════════════════════
-          VALUES STRIP
-          ──────────────────────────────────────────────────────── */}
-      <section className="relative border-t border-white/5 bg-navy-900 py-16 md:py-20">
-        <div className="mx-auto max-w-7xl px-5 lg:px-8">
-          <div className="flex flex-wrap items-end justify-between gap-6">
-            <div>
-              <h2 className="text-[10px] font-semibold uppercase tracking-[0.24em] text-cyan-neon">
-                Values
-              </h2>
-              <p className="mt-3 max-w-xl text-3xl font-bold tracking-tight text-primary md:text-4xl">
-                What holds the QuipMed promise together.
-              </p>
-            </div>
-            <Link
-              to="/products"
-              className="text-sm font-medium text-slate-light/80 hover:text-cyan-neon"
-            >
-              Browse the catalogue →
-            </Link>
-          </div>
-          <div className="mt-12 grid gap-4 md:grid-cols-3">
+        {/* Key figures */}
+        <div className="absolute inset-x-0 bottom-0 z-10 border-t border-line">
+          <dl className="mx-auto grid max-w-[90rem] grid-cols-3 px-5 sm:px-8 lg:grid-cols-4 lg:px-12">
             {[
-              {
-                n: "01",
-                k: "Reliable",
-                d: "Time-tested equipment, validated supply chains, and certified partners across 14 countries.",
-                Icon: ShieldCheck,
-                gradient: "from-cyan-500/20 via-blue-500/10 to-transparent",
-              },
-              {
-                n: "02",
-                k: "Modern",
-                d: "From 4K endoscopy to immersive VR therapy — the latest technologies carefully curated for Kuwaiti healthcare.",
-                Icon: Sparkles,
-                gradient: "from-mint/20 via-cyan-neon/10 to-transparent",
-              },
-              {
-                n: "03",
-                k: "Strong",
-                d: "Backed by long-term brand relationships with Neusoft, Allengers, Tuttnauer, EMS Swiss and more.",
-                Icon: Activity,
-                gradient: "from-violet-500/20 via-fuchsia-500/10 to-transparent",
-              },
-            ].map((v, i) => (
-              <motion.article
-                key={v.n}
-                initial={{ opacity: 0, y: 24 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true, margin: "-10%" }}
-                transition={{
-                  duration: 0.5,
-                  delay: (i % 3) * 0.08,
-                  ease: [0.2, 0.7, 0.2, 1],
-                }}
-                whileHover={{ y: -4 }}
-                className="solution-card group relative flex flex-col overflow-hidden rounded-3xl border border-white/10 bg-navy-800/70 p-7 shadow-[0_4px_30px_rgba(0,0,0,0.25)] transition-all hover:border-mint-soft/50 hover:bg-navy-800"
+              { k: "Brand partners", v: brands.length },
+              { k: "Product lines", v: products.length },
+              { k: "Departments", v: departments.length },
+            ].map((s, i) => (
+              <div
+                key={s.k}
+                className={`py-5 lg:py-6 ${i > 0 ? "border-l border-line pl-4 sm:pl-6" : ""}`}
               >
-                <div
-                  aria-hidden="true"
-                  className={`pointer-events-none absolute inset-0 bg-gradient-to-br ${v.gradient} opacity-60`}
-                />
-                <div className="relative flex items-start justify-between">
-                  <span className="grid h-14 w-14 place-items-center rounded-2xl bg-white text-navy-900 ring-1 ring-mint-soft/50 transition-transform group-hover:scale-110">
-                    <v.Icon size={24} strokeWidth={2.2} />
-                  </span>
-                  <span className="rounded-full border border-white/20 bg-white/10 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-white">
-                    {v.n}
-                  </span>
-                </div>
-                <h3 className="relative mt-6 text-xl font-bold leading-tight text-white">
-                  {v.k}
-                </h3>
-                <p className="relative mt-2 text-sm text-white/70">
-                  {v.d}
-                </p>
-              </motion.article>
+                <dt className="font-mono text-[10.5px] uppercase tracking-[0.14em] text-slate-mid">
+                  {s.k}
+                </dt>
+                <dd className="tnum mt-1.5 text-2xl font-medium tracking-tight text-primary sm:text-3xl">
+                  {s.v > 0 ? s.v : "—"}
+                </dd>
+              </div>
             ))}
+            <div className="hidden items-end justify-end py-6 lg:flex">
+              <a
+                href="#solutions"
+                className="group inline-flex items-center gap-3 font-mono text-[10.5px] uppercase tracking-[0.14em] text-slate-mid transition-colors hover:text-primary"
+              >
+                Scroll
+                <span className="relative block h-8 w-px overflow-hidden bg-line-strong">
+                  <span className="absolute inset-x-0 top-0 h-3 animate-[scroll-cue_2.2s_cubic-bezier(0.65,0,0.35,1)_infinite] bg-scan" />
+                </span>
+              </a>
+            </div>
+          </dl>
+        </div>
+      </section>
+
+      {/* ════════════════════════════════════════════════════════
+          01 — SOLUTIONS
+          ──────────────────────────────────────────────────────── */}
+      <section id="solutions" className="relative bg-navy-900 pb-24 pt-24 md:pb-36 md:pt-36">
+        <div className="mx-auto max-w-[90rem] px-5 sm:px-8 lg:px-12">
+          <div className="grid gap-10 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] md:items-end">
+            <div>
+              <Eyebrow index="01">Solutions</Eyebrow>
+              <h2 className="mt-6 max-w-[16ch] text-balance text-[clamp(2.1rem,4.4vw,3.9rem)] font-semibold leading-[1.02] tracking-[-0.035em] text-primary">
+                Everything a modern hospital needs, from diagnosis to recovery.
+              </h2>
+            </div>
+            <div className="md:justify-self-end">
+              <p className="max-w-[46ch] text-pretty text-[17px] leading-relaxed text-slate-mid">
+                {departments.length} clinical departments, each sourced from
+                manufacturers we have vetted ourselves and delivered with
+                installation and after-sales support.
+              </p>
+              <TextLink to="/products" className="mt-6">
+                See the full catalogue
+              </TextLink>
+            </div>
+          </div>
+
+          <div className="mt-16 md:mt-24">
+            <DepartmentIndex departments={departments} products={products} />
           </div>
         </div>
       </section>
 
       {/* ════════════════════════════════════════════════════════
-          FEATURED BRANDS — dynamic, click-to-filter
+          02 — VALUES
           ──────────────────────────────────────────────────────── */}
-      <section className="border-t border-white/5 bg-navy-800 py-16">
-        <div className="mx-auto max-w-7xl px-5 lg:px-8">
-          <div className="mb-8 flex flex-wrap items-end justify-between gap-4">
-            <div>
-              <h3 className="text-[10px] font-semibold uppercase tracking-[0.24em] text-mint-soft">
-                Brand Partners
-              </h3>
-              <p className="mt-2 text-2xl font-bold text-primary md:text-3xl">
-                Trusted manufacturers, one click away.
-              </p>
-            </div>
-            <Link
-              to="/brands"
-              className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.03] px-4 py-2 text-xs font-semibold uppercase tracking-[0.18em] text-slate-light hover:border-mint-soft/40 hover:text-white"
-            >
-              View all brands
-              <ArrowRight size={12} />
-            </Link>
+      <section className="border-t border-line bg-navy-800 py-24 md:py-36">
+        <div className="mx-auto grid max-w-[90rem] gap-14 px-5 sm:px-8 md:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)] lg:px-12">
+          <div className="md:sticky md:top-32 md:self-start">
+            <Eyebrow index="02">Values</Eyebrow>
+            <h2 className="mt-6 max-w-[14ch] text-balance text-[clamp(2.1rem,4.4vw,3.9rem)] font-semibold leading-[1.02] tracking-[-0.035em] text-primary">
+              What holds the QuipMed promise together.
+            </h2>
           </div>
+          <ValuesList
+            items={VALUES.map((v, i) => ({ k: c[`value_0${i + 1}`] || v.k, d: v.d }))}
+          />
+        </div>
+      </section>
 
+      {/* ════════════════════════════════════════════════════════
+          03 — BRAND PARTNERS
+          ──────────────────────────────────────────────────────── */}
+      <section className="border-t border-line bg-navy-900 py-24 md:py-32">
+        <div className="mx-auto max-w-[90rem] px-5 sm:px-8 lg:px-12">
+          <div className="mb-12 flex flex-wrap items-end justify-between gap-6">
+            <div>
+              <Eyebrow index="03">Manufacturers</Eyebrow>
+              <h2 className="mt-6 max-w-[18ch] text-balance text-[clamp(2.1rem,4.4vw,3.9rem)] font-semibold leading-[1.02] tracking-[-0.035em] text-primary">
+                The brands behind the equipment.
+              </h2>
+            </div>
+            <TextLink to="/brands">All brands</TextLink>
+          </div>
           <BrandLogoGrid brands={brands} />
         </div>
       </section>
 
       {/* ════════════════════════════════════════════════════════
-          MISSION / CTA
+          04 — MISSION
           ──────────────────────────────────────────────────────── */}
-      <section className="relative overflow-hidden border-t border-white/5 bg-navy-900 py-20 md:py-28">
-        <div
-          className="pointer-events-none absolute inset-0 bg-grid-dots-dark [background-size:26px_26px] opacity-60"
-          aria-hidden="true"
-        />
-        <div className="relative mx-auto max-w-5xl px-5 text-center lg:px-8">
-          <h3 className="text-[10px] font-semibold uppercase tracking-[0.24em] text-cyan-neon">
-            Mission
-          </h3>
-          <blockquote className="mt-6 text-balance text-3xl font-semibold leading-tight text-primary md:text-5xl">
-            <span className="text-mint">&ldquo;</span>
+      <section className="border-t border-line bg-navy-900 py-28 md:py-40">
+        <div className="mx-auto max-w-[90rem] px-5 sm:px-8 lg:px-12">
+          <Eyebrow index="04">Mission</Eyebrow>
+          <blockquote
+            ref={mission.ref}
+            className={`scan-once mt-10 max-w-[34ch] text-balance text-[clamp(1.7rem,3.3vw,3rem)] font-medium leading-[1.14] tracking-[-0.025em] text-primary ${mission.inView ? "is-in" : ""}`}
+          >
             {c.mission}
-            <span className="text-mint">&rdquo;</span>
           </blockquote>
-          <div className="mt-10 flex flex-wrap items-center justify-center gap-3">
-            <Link
-              to="/contact"
-              className="inline-flex items-center gap-2 rounded-full bg-cyan-neon px-7 py-3.5 text-sm font-semibold text-primary transition-all hover:bg-mint-soft hover:shadow-neon"
-            >
-              Request a consultation
-              <ArrowRight size={16} />
-            </Link>
-            <a
-              href={`mailto:${c.email}`}
-              className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/5 px-7 py-3.5 text-sm font-semibold text-primary transition-all hover:bg-white/10"
-            >
-              {c.email}
-            </a>
+          <div className="mt-14 flex flex-wrap items-center gap-x-8 gap-y-4 border-t border-line pt-10">
+            <PrimaryButton to="/contact">Request a consultation</PrimaryButton>
+            <TextLink href={`mailto:${c.email}`}>{c.email}</TextLink>
           </div>
         </div>
       </section>
@@ -533,19 +274,31 @@ export default function Home() {
   );
 }
 
-function getDepartmentMeta(slug: string, name: string) {
-  const key = `${slug} ${name}`.toLowerCase();
-  if (key.includes("imag") || key.includes("diagnostic"))
-    return { Icon: Scan, gradient: "from-cyan-500/20 via-blue-500/10 to-transparent", tagline: "MRI, CT, X-ray, ultrasound and mammography systems." };
-  if (key.includes("furniture") || key.includes("physio"))
-    return { Icon: Bed, gradient: "from-emerald-500/20 via-teal-500/10 to-transparent", tagline: "Hospital beds, physiotherapy and rehabilitation." };
-  if (key.includes("steril") || key.includes("infection"))
-    return { Icon: ShieldCheck, gradient: "from-violet-500/20 via-fuchsia-500/10 to-transparent", tagline: "Autoclaves, disinfection and CSSD lines." };
-  if (key.includes("surg"))
-    return { Icon: Syringe, gradient: "from-rose-500/20 via-orange-500/10 to-transparent", tagline: "OR tables, lights, lasers and endoscopy." };
-  if (key.includes("patient") || key.includes("care"))
-    return { Icon: Stethoscope, gradient: "from-mint/20 via-cyan-neon/10 to-transparent", tagline: "Wound care, orthopedics and CGM." };
-  if (key.includes("life") || key.includes("support") || key.includes("monitor"))
-    return { Icon: HeartPulse, gradient: "from-red-500/20 via-pink-500/10 to-transparent", tagline: "Patient monitors, ECG and pulmonary function." };
-  return { Icon: Microscope, gradient: "from-mint/20 via-cyan-neon/10 to-transparent", tagline: "Specialty medical equipment." };
+/**
+ * Shown until the 3D brain model is in /public/models (or without WebGL):
+ * the original CT clip, black keyed out via luminance-to-alpha.
+ */
+function ScanVideo() {
+  return (
+    <div className="absolute inset-0 grid place-items-center">
+      <svg aria-hidden="true" width="0" height="0" className="absolute">
+        <defs>
+          <filter id="ctscan-chromakey">
+            <feColorMatrix type="matrix" values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  4 4 4 0 -1.2" />
+          </filter>
+        </defs>
+      </svg>
+      <video
+        src="/ct-scan.mp4"
+        autoPlay
+        loop
+        muted
+        playsInline
+        preload="auto"
+        aria-hidden="true"
+        className="h-[78%] w-auto object-contain"
+        style={{ filter: "url(#ctscan-chromakey) contrast(1.05) brightness(1.05)" }}
+      />
+    </div>
+  );
 }

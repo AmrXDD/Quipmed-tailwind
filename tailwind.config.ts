@@ -35,9 +35,19 @@ export default {
         },
         // Custom text color that swaps between white/black
         primary: "var(--text-primary)",
+        line: {
+          DEFAULT: "var(--line)",
+          strong: "var(--line-strong)",
+        },
+        surface: {
+          DEFAULT: "var(--surface)",
+          raised: "var(--surface-raised)",
+        },
+        scan: "var(--scan)",
       },
       fontFamily: {
         sans: [
+          "Outfit Variable",
           "Outfit",
           "Inter",
           "system-ui",
@@ -46,9 +56,11 @@ export default {
           "Roboto",
           "sans-serif",
         ],
+        mono: ["IBM Plex Mono", "ui-monospace", "SFMono-Regular", "Menlo", "monospace"],
       },
       boxShadow: {
-        neon: "0 0 0 1px rgba(20,83,45,0.45), 0 10px 40px -8px rgba(20,83,45,0.55)",
+        // Former neon glow, now a quiet tinted lift (kept for existing classes).
+        neon: "0 10px 24px -14px rgba(20,83,45,0.7)",
         console:
           "0 30px 80px -20px rgba(0,0,0,0.55), 0 0 0 1px rgba(255,255,255,0.04) inset",
         card: "0 20px 50px -20px rgba(0,0,0,0.45)",
@@ -73,6 +85,10 @@ export default {
           "0%,100%": { transform: "translateY(-22px)" },
           "50%": { transform: "translateY(22px)" },
         },
+      },
+      transitionTimingFunction: {
+        "out-expo": "cubic-bezier(0.16, 1, 0.3, 1)",
+        "in-out-quart": "cubic-bezier(0.76, 0, 0.24, 1)",
       },
       animation: {
         float: "float 6s ease-in-out infinite",
