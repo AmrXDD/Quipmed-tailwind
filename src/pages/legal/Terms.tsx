@@ -93,6 +93,23 @@ export default function Terms() {
       ),
     },
     {
+      id: "credits",
+      title: "Third-party credits",
+      body: (
+        <p>
+          The 3D brain on our home page is based on{" "}
+          <a href="https://sketchfab.com/3d-models/human-brain-7a27c17fd6c0488bb31ab093236a47fb" target="_blank" rel="noopener noreferrer">
+            &ldquo;Human Brain&rdquo;
+          </a>{" "}
+          by 3DRT STUDIOS, licensed under{" "}
+          <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noopener noreferrer">
+            CC BY 4.0
+          </a>
+          . We changed its materials and shading and compressed it for the web.
+        </p>
+      ),
+    },
+    {
       id: "acceptable-use",
       title: "Acceptable use",
       body: (

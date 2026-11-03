@@ -19,6 +19,7 @@ import { MeshoptDecoder } from "three/examples/jsm/libs/meshopt_decoder.module.j
 
 export const BRAIN_MODEL_URL = "/models/brain.glb";
 
+
 type Palette = {
   base: THREE.Color;
   shadow: THREE.Color;
@@ -44,7 +45,9 @@ const PALETTES: Record<"dark" | "light", Palette> = {
 const vertex = /* glsl */ `
   varying vec3 vNormalW;
   varying vec3 vPosW;
+  varying vec2 vUv;
   void main() {
+    vUv = uv;
     vec4 world = modelMatrix * vec4(position, 1.0);
     vPosW = world.xyz;
     vNormalW = normalize(mat3(modelMatrix) * normal);
@@ -60,13 +63,45 @@ const fragment = /* glsl */ `
   uniform vec3 uShadow;
   uniform vec3 uXray;
   uniform vec3 uScan;
+  uniform sampler2D uNormalMap;
+  uniform sampler2D uMap;
+  uniform float uHasNormalMap;
+  uniform float uHasMap;
   varying vec3 vNormalW;
   varying vec3 vPosW;
+  varying vec2 vUv;
+
+  // Tangent-free normal mapping from screen-space derivatives.
+  vec3 perturb(vec3 pos, vec3 N, vec2 uv, vec3 mapN) {
+    vec3 q0 = dFdx(pos);
+    vec3 q1 = dFdy(pos);
+    vec2 st0 = dFdx(uv);
+    vec2 st1 = dFdy(uv);
+    vec3 q1perp = cross(q1, N);
+    vec3 q0perp = cross(N, q0);
+    vec3 T = q1perp * st0.x + q0perp * st1.x;
+    vec3 B = q1perp * st0.y + q0perp * st1.y;
+    float det = max(dot(T, T), dot(B, B));
+    float scale = det == 0.0 ? 0.0 : inversesqrt(det);
+    return normalize(T * (mapN.x * scale) + B * (mapN.y * scale) + N * mapN.z);
+  }
 
   void main() {
     vec3 n = normalize(vNormalW);
     if (!gl_FrontFacing) n = -n;
+    if (uHasNormalMap > 0.5) {
+      vec3 mapN = texture2D(uNormalMap, vUv).xyz * 2.0 - 1.0;
+      mapN.xy *= 1.15;
+      n = perturb(vPosW, n, vUv, mapN);
+    }
     vec3 v = normalize(cameraPosition - vPosW);
+    // Cavity from the albedo: sulci are darker in the source texture.
+    float cavity = 1.0;
+    if (uHasMap > 0.5) {
+      vec3 albedo = texture2D(uMap, vUv).rgb;
+      float lum = dot(albedo, vec3(0.299, 0.587, 0.114));
+      cavity = mix(0.62, 1.08, smoothstep(0.12, 0.62, lum));
+    }
 
     // ── Sculpture shading (unscanned) ──
     vec3 key = normalize(vec3(-0.45, 0.85, 0.55));
@@ -75,7 +110,7 @@ const fragment = /* glsl */ `
     float fil = max(dot(n, fill), 0.0) * 0.35;
     float wrap = clamp(diff * 0.8 + fil + 0.18, 0.0, 1.0);
     float spec = pow(max(dot(reflect(-key, n), v), 0.0), 28.0) * 0.18;
-    vec3 sculpture = mix(uShadow, uBase, smoothstep(0.0, 1.0, wrap)) + spec;
+    vec3 sculpture = mix(uShadow, uBase, smoothstep(0.0, 1.0, wrap * cavity)) + spec;
 
     // ── X-ray read (scanned) ──
     float fres = pow(1.0 - clamp(abs(dot(n, v)), 0.0, 1.0), 2.4);
@@ -156,6 +191,10 @@ function Brain({
       uScanY: { value: 0 },
       uInvert: { value: 0 },
       uSliceDensity: { value: 26 },
+      uNormalMap: { value: null as THREE.Texture | null },
+      uMap: { value: null as THREE.Texture | null },
+      uHasNormalMap: { value: 0 },
+      uHasMap: { value: 0 },
       uBase: { value: PALETTES.dark.base.clone() },
       uShadow: { value: PALETTES.dark.shadow.clone() },
       uXray: { value: PALETTES.dark.xray.clone() },
@@ -180,6 +219,20 @@ function Brain({
   // radius, and give every mesh the scan material.
   const { model, halfHeight } = useMemo(() => {
     const root = scene.clone(true);
+    // Reuse the model's own textures for surface detail.
+    root.traverse((o) => {
+      const m = o as THREE.Mesh;
+      if (!m.isMesh || uniforms.uNormalMap.value) return;
+      const src = m.material as THREE.MeshStandardMaterial;
+      if (src.normalMap) {
+        uniforms.uNormalMap.value = src.normalMap;
+        uniforms.uHasNormalMap.value = 1;
+      }
+      if (src.map) {
+        uniforms.uMap.value = src.map;
+        uniforms.uHasMap.value = 1;
+      }
+    });
     const material = new THREE.ShaderMaterial({
       vertexShader: vertex,
       fragmentShader: fragment,

@@ -3,6 +3,7 @@ import { ArrowUpRight, Download } from "lucide-react";
 import { useCompanyInfo } from "@/hooks/useSupabase";
 import { openConsentSettings } from "@/lib/consent";
 import { useThemeMode } from "@/lib/theme";
+import { BRAIN_MODEL_CREDIT as M } from "@/data/credits";
 import Logo from "./Logo";
 
 const NAV = [
@@ -114,6 +115,21 @@ export default function Footer() {
         <div className="flex flex-col gap-3 border-t border-line py-7 font-mono text-[11px] uppercase tracking-[0.1em] text-slate-mid lg:flex-row lg:items-center lg:justify-between">
           <p>
             © {year} {c.name} · <span dir="rtl" lang="ar" className="normal-case tracking-normal">{c.name_ar}</span> · All rights reserved
+          </p>
+          <p className="normal-case tracking-normal">
+            3D model:{" "}
+            <a href={M.url} target="_blank" rel="noopener noreferrer" className="underline decoration-line-strong underline-offset-2 hover:text-primary">
+              &ldquo;{M.title}&rdquo;
+            </a>{" "}
+            by{" "}
+            <a href={M.authorUrl} target="_blank" rel="noopener noreferrer" className="underline decoration-line-strong underline-offset-2 hover:text-primary">
+              {M.author}
+            </a>
+            ,{" "}
+            <a href={M.licenseUrl} target="_blank" rel="noopener noreferrer" className="underline decoration-line-strong underline-offset-2 hover:text-primary">
+              {M.license}
+            </a>
+            , modified
           </p>
           <p>
             Site by{" "}
