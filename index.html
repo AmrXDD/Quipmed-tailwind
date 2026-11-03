@@ -103,6 +103,21 @@
       }
     </style>
     <script>
+      /* One canonical address. www.quipmed.co and quipmed.co are separate
+         origins (separate logins and storage), so send www to the bare
+         domain. "_w" breaks any loop if the host ever redirects back. */
+      (function () {
+        var l = location;
+        if (l.hostname === "www.quipmed.co" && l.search.indexOf("_w=1") === -1) {
+          var q = l.search ? l.search + "&_w=1" : "?_w=1";
+          l.replace("https://quipmed.co" + l.pathname + q + l.hash);
+        } else if (l.search.indexOf("_w=1") !== -1 && history.replaceState) {
+          var clean = l.search.replace(/[?&]_w=1/, "").replace(/^&/, "?");
+          history.replaceState(null, "", l.pathname + clean + l.hash);
+        }
+      })();
+    </script>
+    <script>
       (function () {
         var d = document.documentElement;
         try {
