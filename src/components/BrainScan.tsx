@@ -3,6 +3,7 @@ import { Canvas, useFrame, useLoader, useThree } from "@react-three/fiber";
 import * as THREE from "three";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 import { MeshoptDecoder } from "three/examples/jsm/libs/meshopt_decoder.module.js";
+import { debugOff } from "@/lib/motion";
 
 /**
  * Hero centrepiece: a 3D brain passing through a CT scanner.
@@ -353,7 +354,7 @@ let webglOk: boolean | null = null;
 function useWebGL() {
   return useMemo(() => {
     if (webglOk !== null) return webglOk;
-    webglOk = probeWebGL();
+    webglOk = !debugOff("no3d") && probeWebGL();
     return webglOk;
   }, []);
 }

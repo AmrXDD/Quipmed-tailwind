@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useLocation } from "react-router-dom";
+import { debugOff } from "@/lib/motion";
 
 /**
  * Route transition that never blocks navigation.
@@ -38,7 +39,7 @@ export default function RouteCurtain() {
     setRun({ id: Date.now(), label: labelFor(pathname) });
   }, [pathname]);
 
-  if (!run) return null;
+  if (!run || debugOff("nocurtain")) return null;
   return (
     <div
       key={run.id}

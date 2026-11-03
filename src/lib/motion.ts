@@ -22,6 +22,12 @@ gsap.registerPlugin(ScrollTrigger);
  * MutationObserver, so components only need the data attributes.
  */
 
+/** Diagnostic switches, only honoured together with ?debug=clicks. */
+export const debugOff = (flag: string) =>
+  typeof location !== "undefined" &&
+  location.search.includes("debug=clicks") &&
+  location.search.includes(flag);
+
 export const prefersReducedMotion = () =>
   typeof window !== "undefined" &&
   window.matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -60,7 +66,7 @@ function probeFrameRate(onSlow: () => void) {
 }
 
 export function startSmoothScroll() {
-  if (lenis || prefersReducedMotion() || !deviceCanSmoothScroll()) return lenis;
+  if (lenis || prefersReducedMotion() || !deviceCanSmoothScroll() || debugOff("nolenis")) return lenis;
   lenis = new Lenis({
     duration: 1.15,
     easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
@@ -188,7 +194,7 @@ function queueRefresh() {
 }
 
 export function startReveals() {
-  if (observer) return;
+  if (observer || debugOff("noreveal")) return;
   if (prefersReducedMotion()) return;
   scan(document);
   observer = new MutationObserver((records) => {
