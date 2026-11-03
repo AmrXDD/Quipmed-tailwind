@@ -8,6 +8,7 @@ import type { Product } from "@/lib/types";
 import { useCart } from "@/lib/cart";
 import { proxyImage } from "@/lib/img";
 import { productImageFor } from "@/data/productImages";
+import { lockScroll } from "@/lib/motion";
 import { expectedSubcategoriesFor } from "@/data/subcategories";
 
 const OTHER_SLUG = "other";
@@ -28,6 +29,17 @@ export default function Products() {
     searchParams.get("sub") ?? "all",
   );
   const [active, setActive] = useState<Product | null>(null);
+
+  useEffect(() => {
+    lockScroll(Boolean(active));
+    if (!active) return;
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && setActive(null);
+    window.addEventListener("keydown", onKey);
+    return () => {
+      window.removeEventListener("keydown", onKey);
+      lockScroll(false);
+    };
+  }, [active]);
 
   useEffect(() => {
     const param = searchParams.get("department") ?? "all";
@@ -181,7 +193,7 @@ export default function Products() {
 
         <div className="mt-12 flex flex-col items-start gap-10 lg:flex-row lg:gap-12">
           <aside className="relative z-10 w-full shrink-0 self-start lg:sticky lg:top-28 lg:w-64">
-            <div className="flex flex-col">
+            <div data-reveal="left" className="flex flex-col">
               <h3 className="mb-4 font-mono text-[11px] font-medium uppercase tracking-[0.14em] text-slate-mid">
                 Departments
               </h3>
@@ -307,39 +319,39 @@ export default function Products() {
                     </div>
                   ))}
                 <AnimatePresence mode="popLayout">
-                  {!loading && visible.map((p) => (
+                  {!loading && visible.map((p, i) => (
                     <motion.button
                       layout
                       layoutId={`card-${p.id}`}
                       key={p.id}
                       onClick={() => setActive(p)}
-                      initial={{ opacity: 0, y: 20 }}
-                      animate={{ opacity: 1, y: 0 }}
                       exit={{ opacity: 0, scale: 0.97 }}
                       transition={{ duration: 0.45, ease: [0.16, 1, 0.3, 1] }}
                       className="group flex flex-col text-left outline-none"
                     >
+                      <div data-reveal={["left", "up", "right"][i % 3]} data-reveal-delay={String((i % 3) * 0.06)} className="flex flex-1 flex-col">
                       {/* Specimen plate: product on a paper-white field */}
                       <div className="scan-hover relative flex aspect-[4/3] items-center justify-center overflow-hidden rounded-[18px] bg-[#f4f5f2] ring-1 ring-black/5 transition-shadow duration-500 group-hover:shadow-[0_24px_60px_-28px_rgba(0,0,0,0.65)] group-focus-visible:ring-2 group-focus-visible:ring-scan">
                         {(() => {
                           const src = productImageFor(p.slug, p.image_url);
                           return src ? (
                             <img
-                              src={proxyImage(src, { w: 640, h: 480 })}
+                              src={proxyImage(src, { w: 800, h: 600 })}
                               alt={p.name}
                               loading="lazy"
+                              decoding="async"
                               referrerPolicy="no-referrer"
-                              className="h-full w-full object-contain p-7 mix-blend-multiply transition-transform duration-700 ease-out-expo group-hover:scale-[1.04]"
+                              className="absolute inset-0 h-full w-full object-cover transition-transform duration-[900ms] ease-out-expo group-hover:scale-[1.05]"
                             />
                           ) : (
                             <Package size={30} strokeWidth={1.5} className="text-black/30" />
                           );
                         })()}
-                        <span className="absolute left-4 top-4 font-mono text-[10px] uppercase tracking-[0.14em] text-black/45">
+                        <span className="absolute left-3 top-3 z-[3] rounded-[4px] bg-white/90 px-2 py-1 font-mono text-[9.5px] uppercase tracking-[0.14em] text-black/70 backdrop-blur-sm">
                           {p.brand_name ?? "QuipMed"}
                         </span>
                         {p.featured && (
-                          <span className="absolute right-4 top-4 rounded-[4px] bg-[#0b0c0b] px-2 py-1 font-mono text-[9.5px] uppercase tracking-[0.14em] text-[#f4f5f2]">
+                          <span className="absolute right-3 top-3 z-[3] rounded-[4px] bg-[#0b0c0b] px-2 py-1 font-mono text-[9.5px] uppercase tracking-[0.14em] text-[#f4f5f2]">
                             Featured
                           </span>
                         )}
@@ -370,6 +382,7 @@ export default function Products() {
                             className="text-scan transition-transform duration-300 group-hover:-translate-y-0.5 group-hover:translate-x-0.5"
                           />
                         </span>
+                      </div>
                       </div>
                     </motion.button>
                   ))}
@@ -428,7 +441,8 @@ function ProductDetail({
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      className="fixed inset-0 z-50 overflow-y-auto bg-navy-900/85 p-4 backdrop-blur-md md:p-10"
+      className="fixed inset-0 z-50 overflow-y-auto overscroll-contain bg-navy-900/85 p-4 backdrop-blur-md md:p-10"
+      data-lenis-prevent
       onClick={onClose}
     >
       <motion.article
@@ -446,12 +460,14 @@ function ProductDetail({
         {(() => {
           const src = productImageFor(product.slug, product.image_url);
           return src ? (
-            <div className="mb-8 flex aspect-[16/10] items-center justify-center overflow-hidden rounded-[18px] bg-[#f4f5f2]">
+            <div className="-mx-6 -mt-6 mb-8 overflow-hidden bg-[#f4f5f2] md:-mx-10 md:-mt-10">
+              {/* Natural aspect ratio: the photo defines the frame, so no bars. */}
               <img
-                src={proxyImage(src, { w: 960, h: 640 })}
+                src={proxyImage(src, { w: 1400 })}
                 alt={product.name}
+                decoding="async"
                 referrerPolicy="no-referrer"
-                className="h-full w-full object-contain p-8 mix-blend-multiply"
+                className="block max-h-[62vh] w-full object-cover"
               />
             </div>
           ) : null;

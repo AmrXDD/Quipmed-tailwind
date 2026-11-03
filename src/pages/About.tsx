@@ -1,4 +1,3 @@
-import { motion } from "framer-motion";
 import { Link } from "react-router-dom";
 import { Linkedin } from "lucide-react";
 import DepartmentIndex from "@/components/DepartmentIndex";
@@ -52,6 +51,8 @@ export default function About() {
           {stats.map((s, i) => (
             <div
               key={s.k}
+              data-reveal="up"
+              data-reveal-delay={String(i * 0.08)}
               className={`border-b border-line py-7 md:border-b-0 ${i % 2 === 1 ? "border-l pl-5" : ""} ${i > 0 ? "md:border-l md:pl-6" : ""}`}
             >
               <dt className="font-mono text-[10.5px] uppercase tracking-[0.14em] text-slate-mid">{s.k}</dt>
@@ -68,19 +69,16 @@ export default function About() {
             { label: "Mission", body: c.mission },
             { label: "Vision", body: c.vision },
           ].map((m, i) => (
-            <motion.article
+            <article
               key={m.label}
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true, margin: "-10%" }}
-              transition={{ duration: 0.8, delay: i * 0.08, ease: [0.16, 1, 0.3, 1] }}
+              data-reveal={i === 0 ? "left" : "right"}
               className={`py-12 md:py-16 ${i === 1 ? "border-t border-line md:border-l md:border-t-0 md:pl-12" : "md:pr-12"}`}
             >
               <Eyebrow index={`0${i + 1}`}>{m.label}</Eyebrow>
               <p className="mt-8 max-w-[30ch] text-balance text-[clamp(1.5rem,2.6vw,2.25rem)] font-medium leading-[1.2] tracking-[-0.02em] text-primary">
                 {m.body}
               </p>
-            </motion.article>
+            </article>
           ))}
         </div>
       </section>
@@ -90,7 +88,7 @@ export default function About() {
         <div className="mx-auto grid max-w-[90rem] gap-14 px-5 sm:px-8 md:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)] lg:px-12">
           <div className="md:sticky md:top-32 md:self-start">
             <Eyebrow index="03">Values</Eyebrow>
-            <h2 className="mt-6 max-w-[16ch] text-balance text-[clamp(2.1rem,4.4vw,3.6rem)] font-semibold leading-[1.02] tracking-[-0.035em] text-primary">
+            <h2 data-reveal="clip-left" className="mt-6 max-w-[16ch] text-balance text-[clamp(2.1rem,4.4vw,3.6rem)] font-semibold leading-[1.02] tracking-[-0.035em] text-primary">
               Three principles behind every procurement decision.
             </h2>
           </div>
@@ -101,19 +99,17 @@ export default function About() {
       {/* ── Leadership ─────────────────────────────────── */}
       <section className="mx-auto mt-24 max-w-[90rem] px-5 sm:px-8 md:mt-36 lg:px-12">
         <Eyebrow index="04">Leadership</Eyebrow>
-        <motion.div
-          initial={{ opacity: 0, y: 24 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true, margin: "-10%" }}
-          transition={{ duration: 0.9, ease: [0.16, 1, 0.3, 1] }}
+        <div
+          data-reveal="clip-up"
           className="mt-8 grid overflow-hidden rounded-[24px] border border-line bg-surface md:grid-cols-[1fr_1.1fr]"
         >
           {/* Portrait + per-person LinkedIn pills */}
-          <div className="relative isolate aspect-[4/5] overflow-hidden md:aspect-auto md:min-h-[600px]">
+          <div data-parallax-root className="relative isolate aspect-[4/5] overflow-hidden md:aspect-auto md:min-h-[600px]">
             <img
+              data-parallax-y="36"
               src="/jassim-alkajek.jpg"
               alt="QuipMed leadership team: Eng. Jassim Al Kajek, Mr. Jassim Bin Essa and Eng. Mohamed Rajab"
-              className="absolute inset-0 h-full w-full object-cover object-center"
+              className="absolute inset-x-0 -top-[7%] h-[114%] w-full object-cover object-center"
               loading="lazy"
             />
             <div
@@ -194,7 +190,7 @@ export default function About() {
               </TextLink>
             </div>
           </div>
-        </motion.div>
+        </div>
       </section>
 
       {/* ── Specialities ───────────────────────────────── */}
@@ -202,7 +198,7 @@ export default function About() {
         <div className="mb-12 flex flex-wrap items-end justify-between gap-6 md:mb-16">
           <div>
             <Eyebrow index="05">Specialities</Eyebrow>
-            <h2 className="mt-6 max-w-[18ch] text-balance text-[clamp(2.1rem,4.4vw,3.6rem)] font-semibold leading-[1.02] tracking-[-0.035em] text-primary">
+            <h2 data-reveal="right" className="mt-6 max-w-[18ch] text-balance text-[clamp(2.1rem,4.4vw,3.6rem)] font-semibold leading-[1.02] tracking-[-0.035em] text-primary">
               {departments.length} clinical domain{departments.length === 1 ? "" : "s"}. One trusted partner.
             </h2>
           </div>
@@ -213,7 +209,7 @@ export default function About() {
 
       {/* ── CTA ────────────────────────────────────────── */}
       <section className="mx-auto mt-24 max-w-[90rem] px-5 sm:px-8 md:mt-36 lg:px-12">
-        <div className="grid gap-10 rounded-[24px] bg-primary px-7 py-12 text-[var(--bg-primary)] md:grid-cols-[minmax(0,1fr)_auto] md:items-end md:px-14 md:py-16">
+        <div data-reveal="scale" className="grid gap-10 rounded-[24px] bg-primary px-7 py-12 text-[var(--bg-primary)] md:grid-cols-[minmax(0,1fr)_auto] md:items-end md:px-14 md:py-16">
           <div>
             <h2 className="max-w-[18ch] text-balance text-[clamp(2rem,4vw,3.4rem)] font-semibold leading-[1.02] tracking-[-0.035em]">
               Ready to equip your facility?

@@ -22,5 +22,7 @@ export function proxyImage(
   if (opts?.w) params.set("w", String(opts.w));
   if (opts?.h) params.set("h", String(opts.h));
   params.set("fit", "cover");
+  // Width-only requests keep the photo's own aspect; never upscale them.
+  if (opts?.w && !opts?.h) params.set("we", "");
   return `https://images.weserv.nl/?${params.toString()}`;
 }

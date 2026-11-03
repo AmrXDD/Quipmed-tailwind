@@ -4,6 +4,7 @@ import SplitType from "split-type";
 import BrandLogoGrid from "@/components/BrandLogoGrid";
 import DepartmentIndex from "@/components/DepartmentIndex";
 import ValuesList from "@/components/ValuesList";
+import DisciplineMarquee from "@/components/DisciplineMarquee";
 import { Eyebrow, PrimaryButton, TextLink, useInViewOnce } from "@/components/ui/primitives";
 import { useCompanyInfo, useBrands, useProducts, useDepartments } from "@/hooks/useSupabase";
 import { markPreloader, usePreloaderLeaving } from "@/lib/preloader";
@@ -195,11 +196,11 @@ export default function Home() {
           <div className="grid gap-10 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] md:items-end">
             <div>
               <Eyebrow index="01">Solutions</Eyebrow>
-              <h2 className="mt-6 max-w-[16ch] text-balance text-[clamp(2.1rem,4.4vw,3.9rem)] font-semibold leading-[1.02] tracking-[-0.035em] text-primary">
+              <h2 data-reveal="left" className="mt-6 max-w-[16ch] text-balance text-[clamp(2.1rem,4.4vw,3.9rem)] font-semibold leading-[1.02] tracking-[-0.035em] text-primary">
                 Everything a modern hospital needs, from diagnosis to recovery.
               </h2>
             </div>
-            <div className="md:justify-self-end">
+            <div data-reveal="right" data-reveal-delay="0.1" className="md:justify-self-end">
               <p className="max-w-[46ch] text-pretty text-[17px] leading-relaxed text-slate-mid">
                 {departments.length} clinical departments, each sourced from
                 manufacturers we have vetted ourselves and delivered with
@@ -217,6 +218,11 @@ export default function Home() {
         </div>
       </section>
 
+      <DisciplineMarquee
+        top={departments.map((d) => d.name)}
+        bottom={brands.length ? brands.map((b) => b.name) : departments.map((d) => d.name)}
+      />
+
       {/* ════════════════════════════════════════════════════════
           02 — VALUES
           ──────────────────────────────────────────────────────── */}
@@ -224,7 +230,7 @@ export default function Home() {
         <div className="mx-auto grid max-w-[90rem] gap-14 px-5 sm:px-8 md:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)] lg:px-12">
           <div className="md:sticky md:top-32 md:self-start">
             <Eyebrow index="02">Values</Eyebrow>
-            <h2 className="mt-6 max-w-[14ch] text-balance text-[clamp(2.1rem,4.4vw,3.9rem)] font-semibold leading-[1.02] tracking-[-0.035em] text-primary">
+            <h2 data-reveal="clip-left" className="mt-6 max-w-[14ch] text-balance text-[clamp(2.1rem,4.4vw,3.9rem)] font-semibold leading-[1.02] tracking-[-0.035em] text-primary">
               What holds the QuipMed promise together.
             </h2>
           </div>
@@ -242,13 +248,15 @@ export default function Home() {
           <div className="mb-12 flex flex-wrap items-end justify-between gap-6">
             <div>
               <Eyebrow index="03">Manufacturers</Eyebrow>
-              <h2 className="mt-6 max-w-[18ch] text-balance text-[clamp(2.1rem,4.4vw,3.9rem)] font-semibold leading-[1.02] tracking-[-0.035em] text-primary">
+              <h2 data-reveal="right" className="mt-6 max-w-[18ch] text-balance text-[clamp(2.1rem,4.4vw,3.9rem)] font-semibold leading-[1.02] tracking-[-0.035em] text-primary">
                 The brands behind the equipment.
               </h2>
             </div>
             <TextLink to="/brands">All brands</TextLink>
           </div>
-          <BrandLogoGrid brands={brands} />
+          <div data-reveal="clip-up">
+            <BrandLogoGrid brands={brands} />
+          </div>
         </div>
       </section>
 
@@ -264,7 +272,7 @@ export default function Home() {
           >
             {c.mission}
           </blockquote>
-          <div className="mt-14 flex flex-wrap items-center gap-x-8 gap-y-4 border-t border-line pt-10">
+          <div data-reveal="right" className="mt-14 flex flex-wrap items-center gap-x-8 gap-y-4 border-t border-line pt-10">
             <PrimaryButton to="/contact">Request a consultation</PrimaryButton>
             <TextLink href={`mailto:${c.email}`}>{c.email}</TextLink>
           </div>

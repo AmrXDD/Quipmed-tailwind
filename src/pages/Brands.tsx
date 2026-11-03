@@ -30,7 +30,9 @@ export default function Brands() {
               ))}
             </div>
           ) : (
-            <BrandLogoGrid brands={brands} />
+            <div data-reveal="clip-up">
+              <BrandLogoGrid brands={brands} />
+            </div>
           )}
           <p className="mt-6 max-w-[70ch] text-xs leading-relaxed text-slate-mid">
             Brand names and logos are trademarks of their respective owners and are shown to

@@ -30,13 +30,13 @@ export default function Footer() {
       <div className="mx-auto max-w-[90rem] px-5 sm:px-8 lg:px-12">
         {/* Statement row */}
         <div className="grid gap-12 border-b border-line py-16 md:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)] md:py-20">
-          <div>
+          <div data-reveal="left">
             <Logo className="block h-12" tone={theme === "light" ? "dark" : "light"} />
             <p className="mt-8 max-w-[44ch] text-[15px] leading-relaxed text-slate-mid">
               {c.about}
             </p>
           </div>
-          <div className="flex flex-col items-start justify-between gap-8 md:items-end">
+          <div data-reveal="right" className="flex flex-col items-start justify-between gap-8 md:items-end">
             <a
               href={`mailto:${c.email}`}
               className="group inline-flex items-center gap-3 text-[clamp(1.4rem,2.6vw,2.2rem)] font-medium tracking-[-0.02em] text-primary"

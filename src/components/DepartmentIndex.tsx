@@ -1,5 +1,4 @@
 import { Link } from "react-router-dom";
-import { motion } from "framer-motion";
 import { ArrowUpRight } from "lucide-react";
 import type { Department, Product } from "@/lib/types";
 
@@ -33,12 +32,9 @@ export default function DepartmentIndex({
         const count = products.filter((p) => p.department_id === d.id).length;
         const subs = showSubcategories ? subsFor(d.id) : [];
         return (
-          <motion.li
+          <li
             key={d.id}
-            initial={{ opacity: 0, y: 18 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true, margin: "-8%" }}
-            transition={{ duration: 0.7, delay: Math.min(i, 5) * 0.06, ease: [0.16, 1, 0.3, 1] }}
+            data-reveal={i % 2 === 0 ? "left" : "right"}
             className="scan-hover group relative border-t border-line transition-colors duration-500 hover:bg-white/[0.025]"
           >
             {/* Whole-row link target (kept outside transformed children). */}
@@ -87,7 +83,7 @@ export default function DepartmentIndex({
                 </span>
               </div>
             </div>
-          </motion.li>
+          </li>
         );
       })}
     </ol>

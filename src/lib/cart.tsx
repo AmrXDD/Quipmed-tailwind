@@ -43,7 +43,11 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   const [isOpen, setIsOpen] = useState(false);
 
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
+    } catch {
+      /* storage blocked — list lives for this visit only */
+    }
   }, [items]);
 
   const openCart = useCallback(() => setIsOpen(true), []);

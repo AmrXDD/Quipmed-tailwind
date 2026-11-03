@@ -140,16 +140,16 @@ export function PageHeader({
     <header className="grid gap-8 border-b border-line pb-12 md:grid-cols-[minmax(0,1fr)_auto] md:items-end">
       <div>
         <Eyebrow>{eyebrow}</Eyebrow>
-        <h1 className="mt-6 max-w-4xl text-balance text-[clamp(2.4rem,5.2vw,4.75rem)] font-semibold leading-[0.98] tracking-[-0.035em] text-primary">
+        <h1 data-reveal="left" className="mt-6 max-w-4xl text-balance text-[clamp(2.4rem,5.2vw,4.75rem)] font-semibold leading-[0.98] tracking-[-0.035em] text-primary">
           {title}
         </h1>
         {lead && (
-          <p className="mt-6 max-w-[62ch] text-pretty text-[17px] leading-relaxed text-slate-mid">
+          <p data-reveal="right" data-reveal-delay="0.1" className="mt-6 max-w-[62ch] text-pretty text-[17px] leading-relaxed text-slate-mid">
             {lead}
           </p>
         )}
       </div>
-      {aside && <div className="md:pb-2">{aside}</div>}
+      {aside && <div data-reveal="right" data-reveal-delay="0.2" className="md:pb-2">{aside}</div>}
     </header>
   );
 }

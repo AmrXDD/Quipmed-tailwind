@@ -1,5 +1,6 @@
 import { Routes, Route, useLocation } from "react-router-dom";
 import { useState, useEffect, useCallback } from "react";
+import { AnimatePresence } from "framer-motion";
 
 import Nav from "@/components/Nav";
 import Footer from "@/components/Footer";
@@ -17,6 +18,14 @@ import Terms from "@/pages/legal/Terms";
 import Cookies from "@/pages/legal/Cookies";
 import NotFound from "@/pages/NotFound";
 import CookieConsent from "@/components/CookieConsent";
+import PageTransition, { labelFor } from "@/components/PageTransition";
+import {
+  pruneScrollTriggers,
+  scrollToTop,
+  startReveals,
+  startSmoothScroll,
+  stopSmoothScroll,
+} from "@/lib/motion";
 import AdminLogin from "@/pages/AdminLogin";
 import Admin from "@/pages/Admin";
 
@@ -32,8 +41,13 @@ export default function App() {
   const [loading, setLoading] = useState(true);
 
   const [theme, setTheme] = useState<"dark" | "light">(() => {
-    const saved = localStorage.getItem("theme");
-    return (saved as "dark" | "light") || "dark";
+    let saved: string | null = null;
+    try {
+      saved = localStorage.getItem("theme");
+    } catch {
+      /* storage blocked */
+    }
+    return saved === "light" ? "light" : "dark";
   });
 
   // Resolve the role for a given session from the profiles table.
@@ -103,13 +117,28 @@ export default function App() {
 
   // Theme management
   useEffect(() => {
-    localStorage.setItem("theme", theme);
+    try {
+      localStorage.setItem("theme", theme);
+    } catch {
+      /* storage blocked */
+    }
     if (theme === "light") {
       document.documentElement.classList.add("theme-white");
     } else {
       document.documentElement.classList.remove("theme-white");
     }
   }, [theme]);
+
+  // Smooth scroll + scroll reveals on the public site only; the admin
+  // panels keep native scrolling for their own scroll containers.
+  useEffect(() => {
+    if (isAdminPath) {
+      stopSmoothScroll();
+      return;
+    }
+    startSmoothScroll();
+    startReveals();
+  }, [isAdminPath]);
 
   const toggleTheme = () => setTheme((prev) => (prev === "dark" ? "light" : "dark"));
 
@@ -130,6 +159,34 @@ export default function App() {
     );
   }
 
+  const routes = (
+    <Routes location={location}>
+      <Route path="/" element={<Home />} />
+      <Route path="/about" element={<About />} />
+      <Route path="/products" element={<Products />} />
+      <Route path="/brands" element={<Brands />} />
+      <Route path="/contact" element={<Contact />} />
+      <Route path="/privacy" element={<Privacy />} />
+      <Route path="/terms" element={<Terms />} />
+      <Route path="/cookies" element={<Cookies />} />
+
+      <Route path="/admin/login" element={<AdminLogin />} />
+
+      <Route
+        path="/admin/*"
+        element={
+          <ProtectedRoute
+            requiredRoles={ROLES.filter((r) => canAccessAdmin(r))}
+            userRole={userRole}
+          >
+            <Admin userRole={userRole} />
+          </ProtectedRoute>
+        }
+      />
+      <Route path="*" element={<NotFound />} />
+    </Routes>
+  );
+
   return (
     <CartProvider>
       <div className={theme === "light" ? "theme-white" : ""}>
@@ -138,32 +195,23 @@ export default function App() {
 
         {!isAdminPath && <div className="grain" aria-hidden="true" />}
 
-        <main id="main" key={location.pathname} className="min-h-screen bg-navy-900">
-          <Routes location={location}>
-            <Route path="/" element={<Home />} />
-            <Route path="/about" element={<About />} />
-            <Route path="/products" element={<Products />} />
-            <Route path="/brands" element={<Brands />} />
-            <Route path="/contact" element={<Contact />} />
-            <Route path="/privacy" element={<Privacy />} />
-            <Route path="/terms" element={<Terms />} />
-            <Route path="/cookies" element={<Cookies />} />
-
-            <Route path="/admin/login" element={<AdminLogin />} />
-
-            <Route
-              path="/admin/*"
-              element={
-                <ProtectedRoute
-                  requiredRoles={ROLES.filter((r) => canAccessAdmin(r))}
-                  userRole={userRole}
-                >
-                  <Admin userRole={userRole} />
-                </ProtectedRoute>
-              }
-            />
-            <Route path="*" element={<NotFound />} />
-          </Routes>
+        <main id="main" className="min-h-screen bg-navy-900">
+          {isAdminPath ? (
+            routes
+          ) : (
+            <AnimatePresence
+              mode="wait"
+              initial={false}
+              onExitComplete={() => {
+                scrollToTop();
+                pruneScrollTriggers();
+              }}
+            >
+              <PageTransition key={location.pathname} label={labelFor(location.pathname)}>
+                {routes}
+              </PageTransition>
+            </AnimatePresence>
+          )}
         </main>
 
         {!isAdminPath && <Footer />}

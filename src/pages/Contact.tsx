@@ -91,10 +91,8 @@ export default function Contact() {
         />
 
         <div className="mt-12 grid gap-8 lg:grid-cols-[1.2fr_1fr]">
-          <motion.form
-            initial={{ opacity: 0, y: 12 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5 }}
+          <form
+            data-reveal="left"
             onSubmit={handleSubmit(onSubmit)}
             className="relative rounded-[20px] border border-line bg-surface p-6 md:p-10"
           >
@@ -246,13 +244,11 @@ export default function Contact() {
               </Link>{" "}
               for how we handle and store it.
             </p>
-          </motion.form>
+          </form>
 
           <div className="flex flex-col gap-5">
-            <motion.div
-              initial={{ opacity: 0, y: 12 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5, delay: 0.1 }}
+            <div
+              data-reveal="right"
               className="relative overflow-hidden rounded-[20px] border border-line bg-surface p-6 md:p-8"
             >
               <h2 className="text-2xl font-semibold tracking-tight text-primary">Headquarters</h2>
@@ -289,32 +285,31 @@ export default function Contact() {
                   </InfoRow>
                 )}
               </dl>
-            </motion.div>
+            </div>
 
-            <motion.div
-              initial={{ opacity: 0, y: 12 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5, delay: 0.2 }}
+            <div
+              data-reveal="clip-right"
+              data-reveal-delay="0.15"
               className="aspect-video overflow-hidden rounded-[20px] border border-line"
             >
               {/* Google Maps sets its own cookies — load only with consent. */}
               <ConsentGate
                 provider="Google Maps"
-                externalHref="https://www.google.com/maps/search/?api=1&query=29.381403,47.986475"
+                externalHref="https://maps.google.com/?cid=844483041488294356"
                 externalLabel="Open in Google Maps"
               >
               <iframe
-                title="QUIP MED location"
-                src="https://www.google.com/maps/embed?pb=!1m13!1m8!1m3!1d3476.6203670780214!2d47.986475!3d29.381403!3m2!1i1024!2i768!4f13.1!3m2!1m1!2zMjnCsDIyJzUzLjEiTiA0N8KwNTknMTEuMyJF!5e0!3m2!1sen!2sus!4v1778574191615!5m2!1sen!2sus"
+                title="QUIP MED - Medical Equipment Supplier on Google Maps"
+                src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d4377.463196286587!2d47.98389431179295!3d29.381407849575744!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x3fcf85952de23c33%3A0xbb834da1ac051d4!2sQUIP%20MED%20-%20Medical%20Equipment%20Supplier!5e1!3m2!1sen!2seg!4v1793734475767!5m2!1sen!2seg"
                 width="100%"
                 height="100%"
-                style={{ border: 0, filter: "grayscale(1) invert(0.9) contrast(1.2) brightness(0.8)" }}
+                style={{ border: 0 }}
                 allowFullScreen
                 loading="lazy"
                 referrerPolicy="strict-origin-when-cross-origin"
               ></iframe>
               </ConsentGate>
-            </motion.div>
+            </div>
           </div>
         </div>
       </div>
