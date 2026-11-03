@@ -251,18 +251,19 @@ function Brain({
     const box = new THREE.Box3().setFromObject(root);
     const size = box.getSize(new THREE.Vector3());
     const center = box.getCenter(new THREE.Vector3());
-    const scale = 2.1 / Math.max(size.x, size.y, size.z);
+    const scale = 1.72 / Math.max(size.x, size.y, size.z);
     root.position.sub(center.multiplyScalar(scale));
     root.scale.setScalar(scale);
     return { model: root, halfHeight: (size.y * scale) / 2 };
   }, [scene, uniforms]);
 
-  useEffect(() => {
-    onReady();
-  }, [onReady]);
-
+  // Report ready only after real frames have been drawn: the first
+  // frames compile the shader and upload textures (a one-off GPU stall),
+  // and that should happen behind the preloader, not during the reveal.
+  const framesDrawn = useRef(0);
   const t0 = useRef<number | null>(null);
   useFrame((state, delta) => {
+    if (framesDrawn.current < 3 && ++framesDrawn.current === 3) onReady();
     if (t0.current === null) t0.current = state.clock.elapsedTime;
     const t = state.clock.elapsedTime - t0.current;
 
@@ -332,15 +333,38 @@ function useModelAvailable(url: string) {
   return state;
 }
 
+// Probed once per page load (creating a GL context isn't free), cached after.
+let webglOk: boolean | null = null;
+
 function useWebGL() {
   return useMemo(() => {
+    if (webglOk !== null) return webglOk;
+    webglOk = probeWebGL();
+    return webglOk;
+  }, []);
+}
+
+function probeWebGL(): boolean {
+  {
     try {
       const c = document.createElement("canvas");
-      return Boolean(c.getContext("webgl2") || c.getContext("webgl"));
+      // failIfMajorPerformanceCaveat: no context if the browser would fall
+      // back to software rendering (GPU blocklisted, acceleration off, VMs,
+      // remote desktops). Those devices get the video instead of a 3D scene
+      // that would freeze clicks.
+      const opts = { failIfMajorPerformanceCaveat: true } as WebGLContextAttributes;
+      const gl = (c.getContext("webgl2", opts) || c.getContext("webgl", opts)) as
+        | WebGLRenderingContext
+        | null;
+      if (!gl) return false;
+      const info = gl.getExtension("WEBGL_debug_renderer_info");
+      const renderer = info ? String(gl.getParameter(info.UNMASKED_RENDERER_WEBGL)) : "";
+      gl.getExtension("WEBGL_lose_context")?.loseContext();
+      return !/swiftshader|llvmpipe|softpipe|software|basic render/i.test(renderer);
     } catch {
       return false;
     }
-  }, []);
+  }
 }
 
 /**

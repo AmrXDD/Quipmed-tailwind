@@ -1,15 +1,14 @@
-import { motion } from "framer-motion";
-import type { ReactNode } from "react";
+import { useEffect, useRef, useState } from "react";
+import { useLocation } from "react-router-dom";
 
 /**
- * Route transition: a curtain rises from the bottom behind a scan line,
- * names the destination, then lifts away to reveal the new page.
+ * Route transition that never blocks navigation.
  *
- * Used as the keyed child of <AnimatePresence mode="wait">: the "cover"
- * panel plays on exit, the "reveal" panel plays on enter.
+ * The new page renders immediately. On top of it, a curtain carrying the
+ * scan line and the destination's name lifts away. The animation is pure
+ * CSS (transform), so it runs on the compositor and keeps playing even if
+ * the main thread is busy — and nothing waits for it to finish.
  */
-
-const EASE = [0.76, 0, 0.24, 1] as const;
 
 const LABELS: Record<string, string> = {
   "/": "Home",
@@ -26,62 +25,33 @@ export function labelFor(path: string) {
   return LABELS[path] ?? "QuipMed";
 }
 
-export default function PageTransition({
-  children,
-  label,
-}: {
-  children: ReactNode;
-  label: string;
-}) {
+export default function RouteCurtain() {
+  const { pathname } = useLocation();
+  const first = useRef(true);
+  const [run, setRun] = useState<{ id: number; label: string } | null>(null);
+
+  useEffect(() => {
+    if (first.current) {
+      first.current = false; // the preloader handles the first load
+      return;
+    }
+    setRun({ id: Date.now(), label: labelFor(pathname) });
+  }, [pathname]);
+
+  if (!run) return null;
   return (
-    <>
-      {/* Content fades and settles on enter, dims on exit. */}
-      <motion.div
-        initial={{ opacity: 0, y: 24 }}
-        animate={{ opacity: 1, y: 0, transition: { duration: 0.9, delay: 0.35, ease: [0.16, 1, 0.3, 1] } }}
-        exit={{ opacity: 0.4, y: -24, transition: { duration: 0.55, ease: EASE } }}
-      >
-        {children}
-      </motion.div>
-
-      {/* Cover: rises on exit. Leading edge carries the scan line. */}
-      <motion.div
-        aria-hidden="true"
-        className="pointer-events-none fixed inset-x-0 bottom-0 z-[90] h-[100svh] bg-[var(--bg-secondary)]"
-        initial={{ y: "100%" }}
-        animate={{ y: "100%" }}
-        exit={{ y: "0%", transition: { duration: 0.6, ease: EASE } }}
-      >
-        {/* Line only exists while the curtain moves, so nothing peeks at rest. */}
-        <motion.span
-          className="absolute inset-x-0 top-0 h-px bg-scan shadow-[0_0_14px_1px_var(--scan)]"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 0 }}
-          exit={{ opacity: 1, transition: { duration: 0 } }}
-        />
-      </motion.div>
-
-      {/* Reveal: starts covering, lifts away on enter, with the label. */}
-      <motion.div
-        aria-hidden="true"
-        className="pointer-events-none fixed inset-x-0 top-0 z-[90] grid h-[100svh] place-items-center bg-[var(--bg-secondary)]"
-        initial={{ y: "0%" }}
-        animate={{ y: "-100%", transition: { duration: 0.75, delay: 0.15, ease: EASE } }}
-        exit={{ y: "-100%" }}
-      >
-        <motion.span
-          initial={{ opacity: 1 }}
-          animate={{ opacity: 0, transition: { duration: 0.3, delay: 0.1 } }}
-          className="font-mono text-[11px] uppercase tracking-[0.2em] text-slate-mid"
-        >
-          {label}
-        </motion.span>
-        <motion.span
-          className="absolute inset-x-0 bottom-0 h-px bg-scan shadow-[0_0_14px_1px_var(--scan)]"
-          initial={{ opacity: 1 }}
-          animate={{ opacity: 0, transition: { duration: 0.15, delay: 0.85 } }}
-        />
-      </motion.div>
-    </>
+    <div
+      key={run.id}
+      aria-hidden="true"
+      className="route-curtain pointer-events-none fixed inset-x-0 top-0 z-[90] grid h-[100svh] place-items-center bg-[var(--bg-secondary)]"
+      onAnimationEnd={(e) => {
+        if (e.target === e.currentTarget) setRun(null);
+      }}
+    >
+      <span className="route-curtain__label font-mono text-[11px] uppercase tracking-[0.2em] text-slate-mid">
+        {run.label}
+      </span>
+      <span className="absolute inset-x-0 bottom-0 h-px bg-scan shadow-[0_0_14px_1px_var(--scan)]" />
+    </div>
   );
 }

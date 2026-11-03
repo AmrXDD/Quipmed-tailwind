@@ -48,7 +48,7 @@
         clip-path: inset(0 0 0 0);
         transition: clip-path 0.9s cubic-bezier(0.76, 0, 0.24, 1);
       }
-      #preloader.is-leaving .pl-bg { clip-path: inset(0 0 100% 0); }
+      #preloader.is-leaving .pl-bg { clip-path: inset(0 0 100% 0); pointer-events: none; }
       #preloader .pl-logo {
         position: absolute;
         left: 50%;
@@ -158,6 +158,7 @@
         }
 
         function done() {
+          if (finished) return;
           finished = true;
           window.__quipmedPreloader.done = true;
           try { sessionStorage.setItem("quipmed.preloaded", "1"); } catch (e) {}
@@ -187,14 +188,13 @@
           // Hand-off: the flight ends at ~1.21s. Show the real nav logo
           // (no fade, same spot, same colour), then remove the flying copy
           // two frames later so there is never a frame with no logo.
+          // Timers, not animation frames, so a busy GPU can't hold this up.
           setTimeout(function () {
             d.removeAttribute("data-preloading");
-            requestAnimationFrame(function () {
-              requestAnimationFrame(function () {
-                root.remove();
-                window.dispatchEvent(new Event("quipmed:preloader-done"));
-              });
-            });
+            setTimeout(function () {
+              if (root.isConnected) root.remove();
+              window.dispatchEvent(new Event("quipmed:preloader-done"));
+            }, 40);
           }, reduce ? 450 : 1280);
         }
 
@@ -218,12 +218,25 @@
           var elapsed = performance.now() - start;
           if ((shown >= 100 && elapsed >= MIN) || elapsed >= MAX + 600) {
             pinLogo();
-            // one frame so the pinned position applies before transitioning
-            requestAnimationFrame(function () { requestAnimationFrame(done); });
+            // let the pinned position apply before transitioning
+            setTimeout(done, 34);
             return;
           }
           requestAnimationFrame(tick);
         }
+
+        // Failsafes that don't depend on animation frames: if frames stall
+        // (busy GPU, background tab), still leave, and never stay on top.
+        setTimeout(function () {
+          if (!finished) { pinLogo(); done(); }
+        }, MAX + 1200);
+        setTimeout(function () {
+          if (root.isConnected) {
+            d.removeAttribute("data-preloading");
+            root.remove();
+            window.dispatchEvent(new Event("quipmed:preloader-done"));
+          }
+        }, MAX + 4500);
 
         window.__quipmedPreloader = {
           done: false,

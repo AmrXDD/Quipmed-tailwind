@@ -1,6 +1,5 @@
 import { Routes, Route, useLocation } from "react-router-dom";
 import { useState, useEffect, useCallback } from "react";
-import { AnimatePresence } from "framer-motion";
 
 import Nav from "@/components/Nav";
 import Footer from "@/components/Footer";
@@ -18,7 +17,7 @@ import Terms from "@/pages/legal/Terms";
 import Cookies from "@/pages/legal/Cookies";
 import NotFound from "@/pages/NotFound";
 import CookieConsent from "@/components/CookieConsent";
-import PageTransition, { labelFor } from "@/components/PageTransition";
+import RouteCurtain from "@/components/PageTransition";
 import {
   pruneScrollTriggers,
   scrollToTop,
@@ -140,6 +139,13 @@ export default function App() {
     startReveals();
   }, [isAdminPath]);
 
+  // New page: start at the top and drop scroll triggers of the old one.
+  useEffect(() => {
+    if (isAdminPath) return;
+    scrollToTop();
+    pruneScrollTriggers();
+  }, [location.pathname, isAdminPath]);
+
   const toggleTheme = () => setTheme((prev) => (prev === "dark" ? "light" : "dark"));
 
   // ── LOADING STATE ──────────────────────────────────────────────
@@ -195,24 +201,10 @@ export default function App() {
 
         {!isAdminPath && <div className="grain" aria-hidden="true" />}
 
-        <main id="main" className="min-h-screen bg-navy-900">
-          {isAdminPath ? (
-            routes
-          ) : (
-            <AnimatePresence
-              mode="wait"
-              initial={false}
-              onExitComplete={() => {
-                scrollToTop();
-                pruneScrollTriggers();
-              }}
-            >
-              <PageTransition key={location.pathname} label={labelFor(location.pathname)}>
-                {routes}
-              </PageTransition>
-            </AnimatePresence>
-          )}
+        <main id="main" key={location.pathname} className="min-h-screen bg-navy-900">
+          {routes}
         </main>
+        {!isAdminPath && <RouteCurtain />}
 
         {!isAdminPath && <Footer />}
         {!isAdminPath && <WhatsAppButton />}

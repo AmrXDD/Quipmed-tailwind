@@ -1,4 +1,4 @@
-import { lazy, Suspense, useCallback, useEffect, useRef } from "react";
+import { lazy, Suspense, useCallback, useEffect, useRef, useState } from "react";
 import { gsap } from "gsap";
 import SplitType from "split-type";
 import BrandLogoGrid from "@/components/BrandLogoGrid";
@@ -93,6 +93,16 @@ export default function Home() {
 
   const onBrainReady = useCallback(() => markPreloader("hero"), []);
 
+  // Arriving from another page: start the 3D scene after the route curtain
+  // has lifted, so its one-off GPU warm-up never lands on the click.
+  // On first load the preloader covers it, so start immediately.
+  const [sceneOn, setSceneOn] = useState(() => !window.__quipmedPreloader?.done);
+  useEffect(() => {
+    if (sceneOn) return;
+    const t = window.setTimeout(() => setSceneOn(true), 950);
+    return () => window.clearTimeout(t);
+  }, [sceneOn]);
+
   // CT readout, written straight to the DOM every frame.
   const onScan = useCallback((p: number) => {
     const slice = Math.round(p * 159) + 1;
@@ -132,13 +142,13 @@ export default function Home() {
           {/* Brain under the scanner */}
           <div className="relative mx-auto aspect-square w-full max-w-[34rem] lg:max-w-none">
             <Suspense fallback={null}>
-              <BrainScan
+              {sceneOn && <BrainScan
                 theme={theme}
                 onReady={onBrainReady}
                 onScan={onScan}
                 className="absolute inset-0"
                 fallback={<ScanVideo />}
-              />
+              />}
             </Suspense>
 
             {/* Readout, set like the corner annotations on a scan film */}

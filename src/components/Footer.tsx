@@ -112,7 +112,7 @@ export default function Footer() {
         </div>
 
         {/* Legal line */}
-        <div className="flex flex-col gap-3 border-t border-line py-7 font-mono text-[11px] uppercase tracking-[0.1em] text-slate-mid lg:flex-row lg:items-center lg:justify-between">
+        <div className="flex flex-col gap-3 border-t border-line pb-24 pt-7 font-mono lg:pb-7 lg:pr-20 text-[11px] uppercase tracking-[0.1em] text-slate-mid lg:flex-row lg:items-center lg:justify-between">
           <p>
             © {year} {c.name} · <span dir="rtl" lang="ar" className="normal-case tracking-normal">{c.name_ar}</span> · All rights reserved
           </p>
@@ -131,15 +131,16 @@ export default function Footer() {
             </a>
             , modified
           </p>
-          <p>
-            Site by{" "}
+          <p className="flex items-center gap-2">
+            Designed &amp; developed by
             <a
-              href="https://covalenstudios.cloud"
+              href="https://amrstudio.dev"
               target="_blank"
               rel="noopener noreferrer"
-              className="text-slate-light transition-colors hover:text-primary"
+              className="group inline-flex items-center gap-1.5 normal-case tracking-normal text-slate-light transition-colors hover:text-primary"
             >
-              Amr Ghamrawy &amp; Covalen Studios
+              <StudioMark />
+              <span className="font-sans text-[12.5px] font-medium">amrstudio.dev</span>
             </a>
           </p>
         </div>
@@ -156,5 +157,29 @@ function FooterCol({ title, children }: { title: string; children: React.ReactNo
       </h2>
       <ul className="mt-5 space-y-2.5 text-[15px]">{children}</ul>
     </div>
+  );
+}
+
+/**
+ * Amr Studio mark: italic serif "a" inside a gradient ring.
+ * Drawn in CSS so it stays sharp at any size and follows the theme.
+ */
+function StudioMark() {
+  const ring =
+    "conic-gradient(from 0deg, #ff5a2c 0%, #ff7a45 22%, #e0607a 36%, #7c3aed 50%, #5b8df5 62%, #22d3ee 75%, #a3aaa3 88%, #ff5a2c 100%)";
+  const mask = "radial-gradient(farthest-side, transparent calc(100% - 2.6px), #000 calc(100% - 2.2px))";
+  return (
+    <span aria-hidden="true" className="relative inline-grid h-[18px] w-[18px] shrink-0 place-items-center">
+      <span
+        className="absolute inset-0 rounded-full transition-transform duration-700 ease-out-expo group-hover:rotate-180"
+        style={{ background: ring, WebkitMask: mask, mask }}
+      />
+      <span
+        className="-mt-px text-[11px] italic leading-none text-primary"
+        style={{ fontFamily: 'Georgia, "Times New Roman", serif' }}
+      >
+        a
+      </span>
+    </span>
   );
 }

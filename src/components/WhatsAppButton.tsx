@@ -8,6 +8,7 @@ export default function WhatsAppButton() {
       target="_blank"
       rel="noopener noreferrer"
       aria-label="Chat with QuipMed on WhatsApp"
+      data-fab
       className="group fixed bottom-5 right-5 z-[60] flex items-center justify-center rounded-full bg-[#25D366] shadow-[0_10px_30px_-10px_rgba(0,0,0,0.6)] transition-transform duration-300 ease-out-expo hover:scale-105 active:scale-95 md:bottom-7 md:right-7"
       style={{ width: 52, height: 52 }}
     >

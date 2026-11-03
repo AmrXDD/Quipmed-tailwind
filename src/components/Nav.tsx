@@ -1,18 +1,32 @@
-import { NavLink, Link, useLocation } from "react-router-dom";
-import { useEffect, useMemo, useRef, useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import { Menu, X, Sun, Moon, ShoppingBag, ChevronDown } from "lucide-react";
+import { Link, NavLink, useLocation } from "react-router-dom";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
+import { AnimatePresence, motion } from "framer-motion";
+import { ArrowUpRight, ChevronDown, Moon, Phone, ShoppingBag, Sun, X } from "lucide-react";
 import Logo from "./Logo";
 import { useCart } from "@/lib/cart";
-import { useDepartments, useProducts } from "@/hooks/useSupabase";
-import { expectedSubcategoriesFor } from "@/data/subcategories";
+import { useCompanyInfo, useDepartments, useProducts } from "@/hooks/useSupabase";
+import { taglineFor } from "./DepartmentIndex";
+import { lockScroll } from "@/lib/motion";
 
-const links = [
+/**
+ * Site navigation.
+ *
+ * A conventional full-width bar (logo left, pages centre, actions right)
+ * so it reads instantly for every visitor. The creative layer is quiet:
+ *  - a green scan line under the current page that glides to whichever
+ *    link you point at, and returns when you leave;
+ *  - a hairline along the bottom edge that fills as you read the page;
+ *  - Departments opens a full-width panel, not a cramped dropdown.
+ * Phones get a "Menu" button (a word, not just an icon) that opens a
+ * full-screen menu dropping down from the top, with large links.
+ */
+
+const LINKS = [
   { to: "/", label: "Home" },
   { to: "/about", label: "About" },
   { to: "/products", label: "Products" },
   { to: "/brands", label: "Brands" },
-  { to: "/contact", label: "Contact Us" },
+  { to: "/contact", label: "Contact" },
 ];
 
 export default function Nav({
@@ -22,418 +36,438 @@ export default function Nav({
   theme: "dark" | "light";
   toggleTheme: () => void;
 }) {
-  const [scrolled, setScrolled] = useState(false);
-  const [open, setOpen] = useState(false);
-  const [deptOpen, setDeptOpen] = useState(false);
-  const [expandedDept, setExpandedDept] = useState<string | null>(null);
   const location = useLocation();
   const { count, openCart } = useCart();
   const { departments } = useDepartments();
   const { products } = useProducts();
-  const deptRef = useRef<HTMLLIElement>(null);
+  const c = useCompanyInfo();
 
-  const subsByDept = useMemo(() => {
-    const map = new Map<string, string[]>();
-    for (const d of departments) {
-      map.set(d.id, [...expectedSubcategoriesFor(d.slug, d.name)]);
-    }
-    for (const p of products) {
-      if (!p.department_id || !p.subcategory) continue;
-      const arr = map.get(p.department_id);
-      if (!arr) continue;
-      if (!arr.includes(p.subcategory)) arr.push(p.subcategory);
-    }
-    for (const arr of map.values()) arr.sort();
-    return map;
-  }, [departments, products]);
+  const [scrolled, setScrolled] = useState(false);
+  const [deptOpen, setDeptOpen] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
 
+  const headerRef = useRef<HTMLElement>(null);
+  const progressRef = useRef<HTMLSpanElement>(null);
+
+  // Close everything on navigation.
   useEffect(() => {
-    if (!deptOpen) {
-      setExpandedDept(null);
-      return;
-    }
-    const onClick = (e: MouseEvent) => {
-      if (deptRef.current && !deptRef.current.contains(e.target as Node))
-        setDeptOpen(false);
+    setDeptOpen(false);
+    setMenuOpen(false);
+  }, [location.pathname, location.search]);
+
+  // Condense on scroll + reading progress (written straight to the DOM).
+  useEffect(() => {
+    let raf = 0;
+    const update = () => {
+      raf = 0;
+      const y = window.scrollY;
+      setScrolled(y > 12);
+      const max = document.documentElement.scrollHeight - window.innerHeight;
+      const p = max > 0 ? Math.min(1, Math.max(0, y / max)) : 0;
+      if (progressRef.current) progressRef.current.style.transform = `scaleX(${p})`;
     };
-    document.addEventListener("mousedown", onClick);
-    return () => document.removeEventListener("mousedown", onClick);
-  }, [deptOpen]);
-
-  useEffect(() => {
-    const onScroll = () => setScrolled(window.scrollY > 20);
-    onScroll();
+    const onScroll = () => {
+      if (!raf) raf = requestAnimationFrame(update);
+    };
+    update();
     window.addEventListener("scroll", onScroll, { passive: true });
-    return () => window.removeEventListener("scroll", onScroll);
-  }, []);
-
-  useEffect(() => {
-    setOpen(false);
+    window.addEventListener("resize", onScroll);
+    return () => {
+      window.removeEventListener("scroll", onScroll);
+      window.removeEventListener("resize", onScroll);
+      if (raf) cancelAnimationFrame(raf);
+    };
   }, [location.pathname]);
 
+  // Departments panel: close on outside click or Escape.
+  useEffect(() => {
+    if (!deptOpen) return;
+    const onDown = (e: PointerEvent) => {
+      if (headerRef.current && !headerRef.current.contains(e.target as Node)) setDeptOpen(false);
+    };
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && setDeptOpen(false);
+    document.addEventListener("pointerdown", onDown);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("pointerdown", onDown);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [deptOpen]);
+
+  // Mobile menu: lock page scroll, close on Escape, hide floating buttons.
+  useEffect(() => {
+    lockScroll(menuOpen);
+    if (menuOpen) document.documentElement.dataset.menu = "open";
+    else delete document.documentElement.dataset.menu;
+    if (!menuOpen) return;
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && setMenuOpen(false);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("keydown", onKey);
+      lockScroll(false);
+      delete document.documentElement.dataset.menu;
+    };
+  }, [menuOpen]);
+
+  const countFor = (id: string) => products.filter((p) => p.department_id === id).length;
+  const phoneHref = `tel:${(c.phone ?? "").replace(/\s/g, "")}`;
+
   return (
-    <header className="pointer-events-none fixed inset-x-0 top-0 z-50">
-      {/* ── Centered floating pill ───────────────────────── */}
-      <div className="pointer-events-none flex justify-center px-4 pt-5">
-        <motion.nav
-          initial={{ opacity: 0, y: -16 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.45, ease: [0.2, 0.7, 0.2, 1] }}
-          className={[
-            "pointer-events-auto flex items-center gap-1 rounded-full border px-2 py-2 shadow-pill backdrop-blur-xl transition-all",
-            scrolled || theme === "light"
-              ? "border-black/10 bg-white/95"
-              : "border-white/10 bg-black/75",
-          ].join(" ")}
+    <header ref={headerRef} className="fixed inset-x-0 top-0 z-50">
+      <div
+        className={`relative border-b backdrop-blur-xl transition-[background-color,border-color] duration-500 ${
+          scrolled || deptOpen
+            ? "border-line bg-[color-mix(in_srgb,var(--bg-primary)_90%,transparent)]"
+            : "border-transparent bg-[color-mix(in_srgb,var(--bg-primary)_55%,transparent)]"
+        }`}
+      >
+        <div
+          className={`mx-auto flex max-w-[90rem] items-center gap-4 px-5 transition-[height] duration-500 ease-out-expo sm:px-8 lg:px-12 ${
+            scrolled ? "h-16" : "h-[76px]"
+          }`}
         >
-          {/* Logo — sits inside the pill on the left */}
-          <Link
-            to="/"
-            aria-label="QuipMed home"
-            data-nav-logo
-            className={[
-              "ml-1 mr-2 flex h-9 items-center rounded-full px-3 transition-colors",
-              scrolled || theme === "light" ? "text-black" : "text-white",
-            ].join(" ")}
-          >
-            <Logo className="block h-7" tone={scrolled || theme === "light" ? "dark" : "light"} />
+          {/* Logo */}
+          <Link to="/" aria-label="QuipMed home" data-nav-logo className="flex h-full shrink-0 items-center">
+            <Logo className="block h-8 sm:h-9" tone={theme === "light" ? "dark" : "light"} />
           </Link>
 
-          {/* Desktop links */}
-          <ul className="hidden items-center gap-0.5 md:flex">
-            {/* Departments dropdown (live) */}
-            <li className="relative" ref={deptRef}>
-              <button
-                onClick={() => setDeptOpen((v) => !v)}
-                className={[
-                  "inline-flex items-center gap-1 rounded-full px-4 py-2 text-sm font-medium transition-colors",
-                  scrolled || theme === "light"
-                    ? "text-black/70 hover:text-black"
-                    : "text-white/75 hover:text-white",
-                ].join(" ")}
-                aria-expanded={deptOpen}
-                aria-haspopup="menu"
+          {/* Pages (desktop) */}
+          <DesktopLinks
+            pathname={location.pathname}
+            deptOpen={deptOpen}
+            onToggleDept={() => setDeptOpen((v) => !v)}
+          />
+
+          {/* Actions */}
+          <div className="ml-auto flex items-center gap-2 sm:gap-3">
+            {c.phone && (
+              <a
+                href={phoneHref}
+                className="hidden items-center gap-2 rounded-full px-3 py-2 text-sm font-medium text-slate-light transition-colors hover:text-primary xl:inline-flex"
               >
-                Departments
-                <ChevronDown
-                  size={14}
-                  className={`transition-transform ${
-                    deptOpen ? "rotate-180" : ""
-                  }`}
-                />
-              </button>
-              <AnimatePresence>
-                {deptOpen && (
-                  <motion.div
-                    initial={{ opacity: 0, y: -6, scale: 0.98 }}
-                    animate={{ opacity: 1, y: 0, scale: 1 }}
-                    exit={{ opacity: 0, y: -6, scale: 0.98 }}
-                    transition={{ duration: 0.18 }}
-                    className={[
-                      "absolute left-0 top-full mt-2 max-h-[70vh] w-[22rem] overflow-y-auto overscroll-contain rounded-2xl border p-2 shadow-pill",
-                      scrolled || theme === "light"
-                        ? "border-black/15 bg-white"
-                        : "border-white/10 bg-black/90 backdrop-blur-xl",
-                    ].join(" ")}
-                    role="menu"
-                    data-lenis-prevent
-                  >
-                    {departments.length === 0 && (
-                      <p
-                        className={
-                          scrolled || theme === "light"
-                            ? "px-3 py-2 text-xs text-black/50"
-                            : "px-3 py-2 text-xs text-white/50"
-                        }
-                      >
-                        No departments yet
-                      </p>
-                    )}
-                    {departments.map((d) => {
-                      const subs = subsByDept.get(d.id) ?? [];
-                      const isExpanded = expandedDept === d.id;
-                      return (
-                        <div key={d.id} className="mb-1">
-                          <div
-                            className={[
-                              "flex items-center gap-1 rounded-xl pr-1",
-                              scrolled || theme === "light"
-                                ? "hover:bg-black/5"
-                                : "hover:bg-white/5",
-                            ].join(" ")}
-                          >
-                            <Link
-                              to={`/products?department=${d.slug}`}
-                              onClick={() => setDeptOpen(false)}
-                              className={[
-                                "flex min-w-0 flex-1 items-center justify-between gap-2 rounded-xl px-3 py-2 text-[13px] font-semibold leading-tight",
-                                scrolled || theme === "light"
-                                  ? "text-black"
-                                  : "text-white",
-                              ].join(" ")}
-                              role="menuitem"
-                            >
-                              <span className="min-w-0 truncate">{d.name}</span>
-                              <span
-                                className={[
-                                  "ml-2 rounded-full px-1.5 py-0.5 text-[10px] font-semibold",
-                                  scrolled || theme === "light"
-                                    ? "bg-mint/15 text-mint"
-                                    : "bg-mint/20 text-mint-soft",
-                                ].join(" ")}
-                              >
-                                {subs.length}
-                              </span>
-                            </Link>
-                            {subs.length > 0 && (
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  setExpandedDept(isExpanded ? null : d.id);
-                                }}
-                                aria-label={isExpanded ? "Collapse" : "Expand"}
-                                aria-expanded={isExpanded}
-                                className={[
-                                  "grid h-7 w-7 place-items-center rounded-lg transition-colors",
-                                  scrolled || theme === "light"
-                                    ? "text-black/60 hover:bg-black/10 hover:text-black"
-                                    : "text-white/60 hover:bg-white/10 hover:text-white",
-                                ].join(" ")}
-                              >
-                                <ChevronDown
-                                  size={14}
-                                  className={`transition-transform ${
-                                    isExpanded ? "rotate-180" : ""
-                                  }`}
-                                />
-                              </button>
-                            )}
-                          </div>
-                          <AnimatePresence initial={false}>
-                            {isExpanded && subs.length > 0 && (
-                              <motion.ul
-                                initial={{ height: 0, opacity: 0 }}
-                                animate={{ height: "auto", opacity: 1 }}
-                                exit={{ height: 0, opacity: 0 }}
-                                transition={{ duration: 0.18 }}
-                                className={[
-                                  "ml-2 mt-0.5 space-y-0.5 overflow-hidden border-l pl-2",
-                                  scrolled || theme === "light"
-                                    ? "border-black/10"
-                                    : "border-white/10",
-                                ].join(" ")}
-                              >
-                                <li>
-                                  <Link
-                                    to={`/products?department=${d.slug}`}
-                                    onClick={() => setDeptOpen(false)}
-                                    className={[
-                                      "block rounded-lg px-2.5 py-1.5 text-xs font-medium italic",
-                                      scrolled || theme === "light"
-                                        ? "text-black/55 hover:bg-black/5 hover:text-black"
-                                        : "text-white/55 hover:bg-white/5 hover:text-white",
-                                    ].join(" ")}
-                                  >
-                                    Show all
-                                  </Link>
-                                </li>
-                                {subs.map((s) => (
-                                  <li key={s}>
-                                    <Link
-                                      to={`/products?department=${d.slug}&sub=${encodeURIComponent(s)}`}
-                                      onClick={() => setDeptOpen(false)}
-                                      className={[
-                                        "block rounded-lg px-2.5 py-1.5 text-xs font-medium",
-                                        scrolled || theme === "light"
-                                          ? "text-black/70 hover:bg-black/5 hover:text-black"
-                                          : "text-white/70 hover:bg-white/5 hover:text-white",
-                                      ].join(" ")}
-                                    >
-                                      {s}
-                                    </Link>
-                                  </li>
-                                ))}
-                              </motion.ul>
-                            )}
-                          </AnimatePresence>
-                        </div>
-                      );
-                    })}
-                    <Link
-                      to="/products?department=other"
-                      onClick={() => setDeptOpen(false)}
-                      className={[
-                        "block rounded-xl px-3 py-2 text-sm font-medium",
-                        scrolled || theme === "light"
-                          ? "text-black/60 hover:bg-black/5 hover:text-black"
-                          : "text-white/60 hover:bg-white/5 hover:text-white",
-                      ].join(" ")}
-                      role="menuitem"
-                    >
-                      Other
-                    </Link>
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </li>
-            {links.map((l) => (
-              <li key={l.to}>
-                <NavLink
-                  to={l.to}
-                  end={l.to === "/"}
-                  className={({ isActive }) =>
-                    [
-                      "relative block rounded-full px-4 py-2 text-sm font-medium transition-colors",
-                      isActive
-                        ? (scrolled || theme === "light")
-                          ? "text-white"
-                          : "text-black"
-                        : (scrolled || theme === "light")
-                          ? "text-black/70 hover:text-black"
-                          : "text-white/75 hover:text-white",
-                    ].join(" ")
-                  }
-                >
-                  {({ isActive }) => (
-                    <>
-                      {isActive && (
-                        <motion.span
-                          layoutId="nav-active"
-                          className="absolute inset-0 -z-10 rounded-full bg-mint"
-                          transition={{
-                            type: "spring",
-                            stiffness: 380,
-                            damping: 30,
-                          }}
-                        />
-                      )}
-                      <span className={isActive ? "relative text-[#fff]" : "relative"}>
-                        {l.label}
-                      </span>
-                    </>
-                  )}
-                </NavLink>
-              </li>
-            ))}
-          </ul>
-
-          {/* Cart button */}
-          <button
-            onClick={openCart}
-            className={[
-              "relative ml-1 flex h-9 w-9 items-center justify-center rounded-full transition-all",
-              scrolled || theme === "light"
-                ? "bg-black/5 text-black hover:bg-black/10"
-                : "bg-white/5 text-white hover:bg-white/10",
-            ].join(" ")}
-            aria-label="Open cart"
-          >
-            <ShoppingBag size={16} />
-            {count > 0 && (
-              <span className="absolute -right-1 -top-1 grid h-4 min-w-[1rem] place-items-center rounded-full bg-cyan-neon px-1 text-[10px] font-bold text-[#fff]">
-                {count}
-              </span>
+                <Phone size={15} className="text-scan" />
+                <span className="tnum">{c.phone}</span>
+              </a>
             )}
-          </button>
 
-          {/* Theme toggle */}
-          <button
-            onClick={toggleTheme}
-            className={[
-              "ml-1 flex h-9 w-9 items-center justify-center rounded-full transition-all",
-              (scrolled || theme === "light")
-                ? "bg-black/5 text-black hover:bg-black/10"
-                : "bg-white/5 text-white hover:bg-white/10",
-            ].join(" ")}
-            aria-label="Toggle theme"
-          >
-            {theme === "dark" ? <Sun size={16} /> : <Moon size={16} />}
-          </button>
+            <button
+              type="button"
+              onClick={openCart}
+              className="relative inline-flex h-11 items-center gap-2 rounded-full border border-line-strong px-3.5 text-sm font-medium text-primary transition-colors hover:bg-white/[0.06]"
+              aria-label={`Quote list, ${count} item${count === 1 ? "" : "s"}`}
+            >
+              <ShoppingBag size={16} />
+              <span className="hidden md:inline">Quote list</span>
+              {count > 0 && (
+                <span className="tnum grid h-5 min-w-5 place-items-center rounded-full bg-mint px-1.5 text-[11px] font-semibold text-[#fff]">
+                  {count}
+                </span>
+              )}
+            </button>
 
-          {/* Mobile toggle — inside the pill */}
-          <button
-            className={[
-              "grid h-9 w-9 place-items-center rounded-full transition-colors md:hidden",
-              (scrolled || theme === "light")
-                ? "bg-black/5 text-black hover:bg-black/10"
-                : "bg-white/5 text-white hover:bg-white/10",
-            ].join(" ")}
-            onClick={() => setOpen((o) => !o)}
-            aria-label={open ? "Close menu" : "Open menu"}
-            aria-expanded={open}
-          >
-            {open ? <X size={16} /> : <Menu size={16} />}
-          </button>
-        </motion.nav>
+            <button
+              type="button"
+              onClick={toggleTheme}
+              className="hidden h-11 w-11 place-items-center rounded-full border border-line-strong text-primary transition-colors hover:bg-white/[0.06] sm:grid"
+              aria-label={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
+              title={theme === "dark" ? "Light mode" : "Dark mode"}
+            >
+              {theme === "dark" ? <Sun size={16} /> : <Moon size={16} />}
+            </button>
+
+            <Link
+              to="/contact"
+              className="hidden h-11 items-center gap-2 rounded-full bg-primary px-5 text-sm font-semibold text-[var(--bg-primary)] transition-colors hover:bg-mint-soft hover:text-[#fff] md:inline-flex"
+            >
+              Request a quote
+            </Link>
+
+            <button
+              type="button"
+              onClick={() => setMenuOpen((v) => !v)}
+              aria-expanded={menuOpen}
+              aria-controls="mobile-menu"
+              className="inline-flex h-11 items-center gap-2 rounded-full border border-line-strong px-4 text-sm font-semibold text-primary lg:hidden"
+            >
+              {menuOpen ? <X size={16} /> : <MenuGlyph />}
+              {menuOpen ? "Close" : "Menu"}
+            </button>
+          </div>
+        </div>
+
+        {/* Reading progress: the scan line fills as you read. */}
+        <span aria-hidden="true" className="absolute inset-x-0 -bottom-px h-px overflow-hidden">
+          <span
+            ref={progressRef}
+            className="block h-full w-full origin-left bg-scan"
+            style={{ transform: "scaleX(0)" }}
+          />
+        </span>
       </div>
 
-      {/* ── Mobile drawer (expands below the pill) ──────── */}
+      {/* Departments panel (desktop) */}
       <AnimatePresence>
-        {open && (
+        {deptOpen && (
           <motion.div
-            initial={{ opacity: 0, y: -10 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -10 }}
-            transition={{ duration: 0.25, ease: [0.2, 0.7, 0.2, 1] }}
-            className="pointer-events-none mt-3 flex justify-center px-4 md:hidden"
+            id="departments-panel"
+            initial={{ opacity: 0, clipPath: "inset(0 0 100% 0)" }}
+            animate={{ opacity: 1, clipPath: "inset(0 0 0% 0)" }}
+            exit={{ opacity: 0, clipPath: "inset(0 0 100% 0)" }}
+            transition={{ duration: 0.45, ease: [0.16, 1, 0.3, 1] }}
+            className="hidden border-b border-line bg-[var(--bg-primary)] shadow-[0_30px_60px_-30px_rgba(0,0,0,0.6)] lg:block"
+            data-lenis-prevent
           >
-            <ul
-              className={[
-                "pointer-events-auto flex w-full max-w-sm flex-col gap-1 rounded-3xl border p-3 shadow-pill",
-                theme === "light"
-                  ? "border-black/15 bg-white"
-                  : "border-white/10 bg-black/90 backdrop-blur-xl",
-              ].join(" ")}
-            >
-              {links.map((l) => (
-                <li key={l.to}>
-                  <NavLink
-                    to={l.to}
-                    end={l.to === "/"}
-                    className={({ isActive }) =>
-                      [
-                        "block rounded-2xl px-4 py-3 text-sm font-medium transition-colors",
-                        isActive
-                          ? "bg-mint text-[#fff]"
-                          : "text-white/80 hover:bg-white/5 hover:text-white",
-                      ].join(" ")
-                    }
-                  >
-                    {l.label}
-                  </NavLink>
-                </li>
-              ))}
-              {departments.length > 0 && (
-                <li className="pt-1">
-                  <p className="px-4 pb-1 text-[10px] font-semibold uppercase tracking-[0.22em] text-white/40">
-                    Departments
+            <div className="mx-auto grid max-w-[90rem] gap-10 px-12 py-10 xl:grid-cols-[minmax(0,1fr)_20rem]">
+              <ul className="grid grid-cols-2 gap-x-8 xl:grid-cols-3">
+                {departments.map((d, i) => {
+                  const n = countFor(d.id);
+                  return (
+                    <li key={d.id}>
+                      <Link
+                        to={`/products?department=${d.slug}`}
+                        className="scan-hover group flex h-full gap-4 border-t border-line py-5 pr-2 transition-colors"
+                      >
+                        <span className="tnum pt-0.5 font-mono text-xs text-slate-mid group-hover:text-scan">
+                          {String(i + 1).padStart(2, "0")}
+                        </span>
+                        <span className="min-w-0">
+                          <span className="block text-[17px] font-semibold leading-snug text-primary">
+                            {d.name}
+                          </span>
+                          <span className="mt-1 block text-sm leading-relaxed text-slate-mid">
+                            {taglineFor(d.slug, d.name)}
+                          </span>
+                          {n > 0 && (
+                            <span className="tnum mt-2 block font-mono text-[11px] uppercase tracking-[0.12em] text-slate-mid">
+                              {n} product line{n === 1 ? "" : "s"}
+                            </span>
+                          )}
+                        </span>
+                      </Link>
+                    </li>
+                  );
+                })}
+              </ul>
+              <aside className="hidden flex-col justify-between rounded-2xl border border-line p-6 xl:flex">
+                <div>
+                  <p className="font-mono text-[11px] uppercase tracking-[0.14em] text-slate-mid">Not sure where to start?</p>
+                  <p className="mt-3 text-[17px] font-medium leading-snug text-primary">
+                    Tell us what your facility needs and we&rsquo;ll point you to the right equipment.
                   </p>
-                  <ul className="space-y-1">
+                </div>
+                <div className="mt-6 space-y-3">
+                  <Link to="/products" className="flex items-center justify-between text-sm font-semibold text-primary">
+                    Browse all products <ArrowUpRight size={16} className="text-scan" />
+                  </Link>
+                  <Link to="/contact" className="flex items-center justify-between text-sm font-semibold text-primary">
+                    Talk to our team <ArrowUpRight size={16} className="text-scan" />
+                  </Link>
+                </div>
+              </aside>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Mobile menu: full screen, drops from the top. */}
+      <AnimatePresence>
+        {menuOpen && (
+          <motion.div
+            id="mobile-menu"
+            initial={{ clipPath: "inset(0 0 100% 0)" }}
+            animate={{ clipPath: "inset(0 0 0% 0)" }}
+            exit={{ clipPath: "inset(0 0 100% 0)" }}
+            transition={{ duration: 0.55, ease: [0.76, 0, 0.24, 1] }}
+            className="fixed inset-x-0 bottom-0 overflow-y-auto overscroll-contain bg-[var(--bg-primary)] lg:hidden"
+            style={{ top: scrolled ? 64 : 76 }}
+            data-lenis-prevent
+          >
+            <nav aria-label="Main" className="mx-auto max-w-xl px-5 pb-16 pt-6 sm:px-8">
+              <ul>
+                {LINKS.map((l, i) => (
+                  <li key={l.to} className="border-b border-line">
+                    <NavLink
+                      to={l.to}
+                      end={l.to === "/"}
+                      className={({ isActive }) =>
+                        `flex items-baseline gap-4 py-4 text-[28px] font-semibold tracking-[-0.02em] ${
+                          isActive ? "text-primary" : "text-slate-light"
+                        }`
+                      }
+                    >
+                      {({ isActive }) => (
+                        <>
+                          <span className={`tnum font-mono text-xs ${isActive ? "text-scan" : "text-slate-mid"}`}>
+                            {String(i + 1).padStart(2, "0")}
+                          </span>
+                          {l.label}
+                          {isActive && <span className="ml-auto h-2 w-2 self-center rounded-full bg-scan" aria-hidden="true" />}
+                        </>
+                      )}
+                    </NavLink>
+                  </li>
+                ))}
+              </ul>
+
+              {departments.length > 0 && (
+                <div className="mt-10">
+                  <p className="font-mono text-[11px] uppercase tracking-[0.14em] text-slate-mid">Departments</p>
+                  <ul className="mt-3 grid gap-1">
                     {departments.map((d) => (
                       <li key={d.id}>
                         <Link
                           to={`/products?department=${d.slug}`}
-                          className="block rounded-2xl px-4 py-2.5 text-sm font-medium text-white/75 hover:bg-white/5 hover:text-white"
+                          className="flex items-center justify-between rounded-xl px-1 py-3 text-[17px] text-primary"
                         >
                           {d.name}
+                          <ArrowUpRight size={16} className="text-scan" />
                         </Link>
                       </li>
                     ))}
-                    <li>
-                      <Link
-                        to="/products?department=other"
-                        className="block rounded-2xl px-4 py-2.5 text-sm font-medium text-white/60 hover:bg-white/5 hover:text-white"
-                      >
-                        Other
-                      </Link>
-                    </li>
                   </ul>
-                </li>
+                </div>
               )}
-            </ul>
+
+              <div className="mt-10 grid gap-3">
+                <Link
+                  to="/contact"
+                  className="inline-flex h-14 items-center justify-center rounded-full bg-primary text-base font-semibold text-[var(--bg-primary)]"
+                >
+                  Request a quote
+                </Link>
+                {c.phone && (
+                  <a
+                    href={phoneHref}
+                    className="inline-flex h-14 items-center justify-center gap-2 rounded-full border border-line-strong text-base font-semibold text-primary"
+                  >
+                    <Phone size={17} className="text-scan" /> Call {c.phone}
+                  </a>
+                )}
+                <button
+                  type="button"
+                  onClick={toggleTheme}
+                  className="inline-flex h-14 items-center justify-center gap-2 rounded-full border border-line-strong text-base font-semibold text-primary"
+                >
+                  {theme === "dark" ? <Sun size={17} /> : <Moon size={17} />}
+                  {theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
+                </button>
+              </div>
+            </nav>
           </motion.div>
         )}
       </AnimatePresence>
     </header>
+  );
+}
+
+/** Desktop page links with the gliding scan-line indicator. */
+function DesktopLinks({
+  pathname,
+  deptOpen,
+  onToggleDept,
+}: {
+  pathname: string;
+  deptOpen: boolean;
+  onToggleDept: () => void;
+}) {
+  const listRef = useRef<HTMLUListElement>(null);
+  const itemRefs = useRef(new Map<string, HTMLElement>());
+  const [hovered, setHovered] = useState<string | null>(null);
+  const [bar, setBar] = useState<{ left: number; width: number; visible: boolean }>({
+    left: 0,
+    width: 0,
+    visible: false,
+  });
+
+  const activeKey =
+    LINKS.find((l) => (l.to === "/" ? pathname === "/" : pathname.startsWith(l.to)))?.to ?? null;
+  const target = hovered ?? (deptOpen ? "dept" : activeKey);
+
+  const measure = useCallback(() => {
+    const list = listRef.current;
+    const el = target ? itemRefs.current.get(target) : null;
+    if (!list || !el) {
+      setBar((b) => ({ ...b, visible: false }));
+      return;
+    }
+    const lr = list.getBoundingClientRect();
+    const r = el.getBoundingClientRect();
+    setBar({ left: r.left - lr.left + 14, width: Math.max(0, r.width - 28), visible: true });
+  }, [target]);
+
+  useLayoutEffect(() => {
+    measure();
+  }, [measure]);
+
+  useEffect(() => {
+    window.addEventListener("resize", measure);
+    document.fonts?.ready.then(measure);
+    return () => window.removeEventListener("resize", measure);
+  }, [measure]);
+
+  const setRef = (key: string) => (el: HTMLElement | null) => {
+    if (el) itemRefs.current.set(key, el);
+    else itemRefs.current.delete(key);
+  };
+
+  return (
+    <nav aria-label="Main" className="ml-6 hidden h-full lg:block xl:ml-10">
+      <ul
+        ref={listRef}
+        className="relative flex h-full items-center"
+        onPointerLeave={() => setHovered(null)}
+      >
+        <li ref={setRef("dept")} onPointerEnter={() => setHovered("dept")}>
+          <button
+            type="button"
+            onClick={onToggleDept}
+            aria-expanded={deptOpen}
+            aria-controls="departments-panel"
+            className={`inline-flex items-center gap-1.5 px-3.5 py-2 text-[15px] font-medium transition-colors ${
+              deptOpen ? "text-primary" : "text-slate-light hover:text-primary"
+            }`}
+          >
+            Departments
+            <ChevronDown size={15} className={`transition-transform duration-300 ${deptOpen ? "rotate-180" : ""}`} />
+          </button>
+        </li>
+        {LINKS.map((l) => (
+          <li key={l.to} ref={setRef(l.to)} onPointerEnter={() => setHovered(l.to)}>
+            <NavLink
+              to={l.to}
+              end={l.to === "/"}
+              className={({ isActive }) =>
+                `block px-3.5 py-2 text-[15px] font-medium transition-colors ${
+                  isActive ? "text-primary" : "text-slate-light hover:text-primary"
+                }`
+              }
+            >
+              {l.label}
+            </NavLink>
+          </li>
+        ))}
+
+        {/* The scan line: sits on the bar's bottom edge, glides between links. */}
+        <span
+          aria-hidden="true"
+          className="pointer-events-none absolute bottom-0 h-[2px] rounded-full bg-scan shadow-[0_0_10px_0_var(--scan)] transition-[transform,width,opacity] duration-500 ease-out-expo"
+          style={{
+            width: bar.width,
+            transform: `translateX(${bar.left}px)`,
+            opacity: bar.visible ? 1 : 0,
+          }}
+        />
+      </ul>
+    </nav>
+  );
+}
+
+function MenuGlyph() {
+  return (
+    <span aria-hidden="true" className="flex w-4 flex-col gap-[3px]">
+      <span className="h-[1.5px] w-full rounded bg-current" />
+      <span className="h-[1.5px] w-full rounded bg-current" />
+      <span className="h-[1.5px] w-2/3 rounded bg-current" />
+    </span>
   );
 }
