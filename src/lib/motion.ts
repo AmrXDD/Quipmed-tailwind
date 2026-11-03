@@ -33,8 +33,34 @@ export function getLenis() {
   return lenis;
 }
 
+/**
+ * Smooth scroll makes scrolling depend on JavaScript frame rate. On an
+ * ordinary office PC that turns into lag and delayed clicks, so it only
+ * runs on machines that report enough headroom, and switches itself off
+ * if the first seconds show it can't keep up.
+ */
+function deviceCanSmoothScroll() {
+  const nav = navigator as Navigator & { deviceMemory?: number };
+  const cores = nav.hardwareConcurrency ?? 4;
+  const memory = nav.deviceMemory ?? 8;
+  const coarse = window.matchMedia("(pointer: coarse)").matches; // touch: native is best
+  return !coarse && cores >= 8 && memory >= 8;
+}
+
+function probeFrameRate(onSlow: () => void) {
+  let frames = 0;
+  const start = performance.now();
+  const step = () => {
+    frames++;
+    const elapsed = performance.now() - start;
+    if (elapsed < 2000) requestAnimationFrame(step);
+    else if ((frames * 1000) / elapsed < 50) onSlow();
+  };
+  requestAnimationFrame(step);
+}
+
 export function startSmoothScroll() {
-  if (lenis || prefersReducedMotion()) return lenis;
+  if (lenis || prefersReducedMotion() || !deviceCanSmoothScroll()) return lenis;
   lenis = new Lenis({
     duration: 1.15,
     easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
@@ -45,6 +71,10 @@ export function startSmoothScroll() {
   tick = (time: number) => lenis?.raf(time * 1000);
   gsap.ticker.add(tick);
   gsap.ticker.lagSmoothing(0);
+  probeFrameRate(() => {
+    console.info("[motion] low frame rate, using native scrolling");
+    stopSmoothScroll();
+  });
   return lenis;
 }
 
@@ -176,6 +206,13 @@ export function startReveals() {
     if (added) queueRefresh();
   });
   observer.observe(document.body, { childList: true, subtree: true });
+}
+
+/** Admin: stop watching the DOM and drop every scroll animation. */
+export function stopReveals() {
+  observer?.disconnect();
+  observer = null;
+  ScrollTrigger.getAll().forEach((t) => t.kill());
 }
 
 /** Drop triggers whose elements left the page (after a route change). */

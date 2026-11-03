@@ -1,5 +1,5 @@
 import { Routes, Route, useLocation } from "react-router-dom";
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 
 import Nav from "@/components/Nav";
 import Footer from "@/components/Footer";
@@ -23,18 +23,21 @@ import {
   scrollToTop,
   startReveals,
   startSmoothScroll,
+  stopReveals,
   stopSmoothScroll,
 } from "@/lib/motion";
 import AdminLogin from "@/pages/AdminLogin";
 import Admin from "@/pages/Admin";
 
-import { supabase, getUserProfile } from "@/lib/supabaseClient";
+import { supabase } from "@/lib/supabaseClient";
 import { canAccessAdmin, ROLES } from "@/lib/permissions";
 
 export default function App() {
   const location = useLocation();
   const isAdminPath = location.pathname.startsWith("/admin");
   const isLoginPage = location.pathname === "/admin/login";
+  const isAdminPathRef = useRef(isAdminPath);
+  isAdminPathRef.current = isAdminPath;
 
   const [userRole, setUserRole] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -49,22 +52,32 @@ export default function App() {
     return saved === "light" ? "light" : "dark";
   });
 
-  // Resolve the role for a given session from the profiles table.
-  // No profile row means no admin access — never assume a role.
-  const resolveRole = useCallback(async (session: any): Promise<string | null> => {
-    if (!session?.user) return null;
-    const timeout = new Promise<null>((resolve) =>
-      setTimeout(() => resolve(null), 5000),
-    );
-    const profile = await Promise.race([getUserProfile(), timeout]);
-    return profile?.role ?? null;
-  }, []);
+  // Resolve the role for a session straight from the profiles table, using
+  // the session we were handed. Returns undefined when the lookup failed or
+  // timed out, so callers can keep the role they already had.
+  const resolveRole = useCallback(
+    async (session: any): Promise<string | null | undefined> => {
+      if (!session?.user) return null;
+      const timeout = new Promise<"timeout">((resolve) =>
+        setTimeout(() => resolve("timeout"), 6000),
+      );
+      const query = supabase
+        .from("profiles")
+        .select("role")
+        .eq("id", session.user.id)
+        .maybeSingle();
+      const res = await Promise.race([query, timeout]);
+      if (res === "timeout" || res.error) return undefined;
+      return res.data?.role ?? null;
+    },
+    [],
+  );
 
   useEffect(() => {
     let cancelled = false;
     let initialHandled = false;
+    let lastUserId: string | null = null;
 
-    // Safety net: if neither getSession nor INITIAL_SESSION resolves, stop loading.
     const safety = setTimeout(() => {
       if (!cancelled && !initialHandled) {
         console.warn("App: initial session check timed out.");
@@ -72,39 +85,41 @@ export default function App() {
       }
     }, 8000);
 
-    const handleSession = async (session: any, tag: string) => {
+    const handleSession = async (session: any) => {
       if (cancelled) return;
-      // Gate the UI until the role is resolved — prevents ProtectedRoute from
-      // rendering with a stale null userRole during the SIGNED_IN → navigate
-      // race right after login.
-      setLoading(true);
+      const userId = session?.user?.id ?? null;
+      const first = !initialHandled;
+      // Only the very first check (or a different user signing in) shows the
+      // loading screen. Later auth events must never unmount the admin.
+      if (first || userId !== lastUserId) setLoading(isAdminPathRef.current);
       const role = await resolveRole(session);
       if (cancelled) return;
-      setUserRole(role);
+      // A failed/slow lookup keeps the role we already know.
+      if (role !== undefined || userId !== lastUserId) setUserRole(role ?? null);
+      lastUserId = userId;
       setLoading(false);
       initialHandled = true;
       clearTimeout(safety);
     };
 
-    // Drive session state off the listener — it fires INITIAL_SESSION on subscribe
-    // once the stored session has been rehydrated, avoiding the getSession race.
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (event: string, session: any) => {
-        if (event === "SIGNED_OUT") {
-          if (!cancelled) {
-            setUserRole(null);
-            setLoading(false);
-          }
-          return;
+    // IMPORTANT: never await Supabase calls inside onAuthStateChange — the
+    // client holds an auth lock while the callback runs, and awaiting another
+    // call there deadlocks every request (admin data, saves, etc.).
+    // Defer the work to a new task instead.
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((event: string, session: any) => {
+      if (event === "SIGNED_OUT") {
+        if (!cancelled) {
+          lastUserId = null;
+          setUserRole(null);
+          setLoading(false);
         }
-        // INITIAL_SESSION, SIGNED_IN, TOKEN_REFRESHED, USER_UPDATED → re-resolve.
-        void handleSession(session, event);
-      },
-    );
-
-    // Fallback: if the listener doesn't fire fast enough, do a direct read.
-    supabase.auth.getSession().then(({ data: { session } }: any) => {
-      if (!initialHandled) void handleSession(session, "getSession");
+        return;
+      }
+      // A token refresh doesn't change who you are or your role.
+      if (event === "TOKEN_REFRESHED" && initialHandled) return;
+      setTimeout(() => void handleSession(session), 0);
     });
 
     return () => {
@@ -133,6 +148,7 @@ export default function App() {
   useEffect(() => {
     if (isAdminPath) {
       stopSmoothScroll();
+      stopReveals();
       return;
     }
     startSmoothScroll();
@@ -199,7 +215,6 @@ export default function App() {
         {!isAdminPath && <Nav theme={theme} toggleTheme={toggleTheme} />}
         {!isAdminPath && <CartDrawer />}
 
-        {!isAdminPath && <div className="grain" aria-hidden="true" />}
 
         <main id="main" key={location.pathname} className="min-h-screen bg-navy-900">
           {routes}

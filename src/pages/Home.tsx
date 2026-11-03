@@ -307,25 +307,19 @@ export default function Home() {
  * the original CT clip, black keyed out via luminance-to-alpha.
  */
 function ScanVideo() {
+  // Black background drops out with a blend mode (cheap, GPU-composited)
+  // instead of a per-frame SVG filter.
   return (
     <div className="absolute inset-0 grid place-items-center">
-      <svg aria-hidden="true" width="0" height="0" className="absolute">
-        <defs>
-          <filter id="ctscan-chromakey">
-            <feColorMatrix type="matrix" values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  4 4 4 0 -1.2" />
-          </filter>
-        </defs>
-      </svg>
       <video
         src="/ct-scan.mp4"
         autoPlay
         loop
         muted
         playsInline
-        preload="auto"
+        preload="metadata"
         aria-hidden="true"
-        className="h-[78%] w-auto object-contain"
-        style={{ filter: "url(#ctscan-chromakey) contrast(1.05) brightness(1.05)" }}
+        className="h-[72%] w-auto object-contain mix-blend-screen [.theme-white_&]:mix-blend-multiply [.theme-white_&]:invert"
       />
     </div>
   );

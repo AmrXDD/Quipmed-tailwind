@@ -115,10 +115,10 @@ export default function Nav({
   return (
     <header ref={headerRef} className="fixed inset-x-0 top-0 z-50">
       <div
-        className={`relative border-b backdrop-blur-xl transition-[background-color,border-color] duration-500 ${
+        className={`relative border-b transition-[background-color,border-color] duration-500 ${
           scrolled || deptOpen
-            ? "border-line bg-[color-mix(in_srgb,var(--bg-primary)_90%,transparent)]"
-            : "border-transparent bg-[color-mix(in_srgb,var(--bg-primary)_55%,transparent)]"
+            ? "border-line bg-[color-mix(in_srgb,var(--bg-primary)_96%,transparent)]"
+            : "border-transparent bg-[var(--bg-primary)]"
         }`}
       >
         <div

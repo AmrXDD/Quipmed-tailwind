@@ -171,12 +171,14 @@ function Brain({
   reduceMotion,
   onReady,
   onScan,
+  onSlow,
 }: {
   url: string;
   theme: "dark" | "light";
   reduceMotion: boolean;
   onReady: () => void;
   onScan?: (progress: number) => void;
+  onSlow: () => void;
 }) {
   const { scene } = useLoader(GLTFLoader, url, (loader) => {
     (loader as GLTFLoader).setMeshoptDecoder(MeshoptDecoder);
@@ -262,8 +264,20 @@ function Brain({
   // and that should happen behind the preloader, not during the reveal.
   const framesDrawn = useRef(0);
   const t0 = useRef<number | null>(null);
+  // Watch real frame times after warm-up; if this device can't hold ~35fps,
+  // hand over to the video so the rest of the page stays responsive.
+  const slow = useRef({ frames: 0, time: 0, done: false });
   useFrame((state, delta) => {
     if (framesDrawn.current < 3 && ++framesDrawn.current === 3) onReady();
+    const s = slow.current;
+    if (!s.done && framesDrawn.current >= 3 && delta < 1) {
+      s.frames++;
+      s.time += delta;
+      if (s.frames === 90) {
+        s.done = true;
+        if (s.time / s.frames > 1 / 35) onSlow();
+      }
+    }
     if (t0.current === null) t0.current = state.clock.elapsedTime;
     const t = state.clock.elapsedTime - t0.current;
 
@@ -420,18 +434,20 @@ export default function BrainScan({
     return () => io.disconnect();
   }, []);
 
+  const [tooSlow, setTooSlow] = useState(false);
+
   useEffect(() => {
     if (available === "no" || !webgl) onReady();
   }, [available, webgl, onReady]);
 
-  if (available === "no" || !webgl) return <>{fallback}</>;
+  if (available === "no" || !webgl || tooSlow) return <>{fallback}</>;
 
   return (
     <div ref={wrap} className={className}>
       {available === "yes" && (
         <SceneBoundary fallback={fallback} onError={onReady}>
         <Canvas
-          dpr={[1, window.innerWidth < 768 ? 1.5 : 1.75]}
+          dpr={[1, Math.min(window.devicePixelRatio || 1, 1.25)]}
           frameloop={visible ? "always" : "never"}
           camera={{ position: [0, 0.32, 4.6], fov: 30 }}
           gl={{ antialias: true, alpha: true, powerPreference: "high-performance" }}
@@ -444,6 +460,7 @@ export default function BrainScan({
               reduceMotion={reduceMotion}
               onReady={onReady}
               onScan={onScan}
+              onSlow={() => setTooSlow(true)}
             />
           </Suspense>
         </Canvas>
