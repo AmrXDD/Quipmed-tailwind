@@ -3,7 +3,7 @@ import { Canvas, useFrame, useLoader, useThree } from "@react-three/fiber";
 import * as THREE from "three";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 import { MeshoptDecoder } from "three/examples/jsm/libs/meshopt_decoder.module.js";
-import { debugOff } from "@/lib/motion";
+import { downgradeToLite, hasHardwareWebGL } from "@/lib/perf";
 
 /**
  * Hero centrepiece: a 3D brain passing through a CT scanner.
@@ -311,7 +311,7 @@ function Brain({
 
   return (
     <group ref={tilt}>
-      <group ref={group} rotation={[0, -0.6, 0]}>
+      <group ref={group} rotation={[0, -0.85, 0]}>
         <primitive object={model} />
       </group>
       {/* Sheet of light — the scanner plane. Seen almost edge-on. */}
@@ -348,38 +348,8 @@ function useModelAvailable(url: string) {
   return state;
 }
 
-// Probed once per page load (creating a GL context isn't free), cached after.
-let webglOk: boolean | null = null;
-
 function useWebGL() {
-  return useMemo(() => {
-    if (webglOk !== null) return webglOk;
-    webglOk = !debugOff("no3d") && probeWebGL();
-    return webglOk;
-  }, []);
-}
-
-function probeWebGL(): boolean {
-  {
-    try {
-      const c = document.createElement("canvas");
-      // failIfMajorPerformanceCaveat: no context if the browser would fall
-      // back to software rendering (GPU blocklisted, acceleration off, VMs,
-      // remote desktops). Those devices get the video instead of a 3D scene
-      // that would freeze clicks.
-      const opts = { failIfMajorPerformanceCaveat: true } as WebGLContextAttributes;
-      const gl = (c.getContext("webgl2", opts) || c.getContext("webgl", opts)) as
-        | WebGLRenderingContext
-        | null;
-      if (!gl) return false;
-      const info = gl.getExtension("WEBGL_debug_renderer_info");
-      const renderer = info ? String(gl.getParameter(info.UNMASKED_RENDERER_WEBGL)) : "";
-      gl.getExtension("WEBGL_lose_context")?.loseContext();
-      return !/swiftshader|llvmpipe|softpipe|software|basic render/i.test(renderer);
-    } catch {
-      return false;
-    }
-  }
+  return useMemo(() => hasHardwareWebGL(), []);
 }
 
 /**
@@ -435,13 +405,11 @@ export default function BrainScan({
     return () => io.disconnect();
   }, []);
 
-  const [tooSlow, setTooSlow] = useState(false);
-
   useEffect(() => {
     if (available === "no" || !webgl) onReady();
   }, [available, webgl, onReady]);
 
-  if (available === "no" || !webgl || tooSlow) return <>{fallback}</>;
+  if (available === "no" || !webgl) return <>{fallback}</>;
 
   return (
     <div ref={wrap} className={className}>
@@ -461,7 +429,7 @@ export default function BrainScan({
               reduceMotion={reduceMotion}
               onReady={onReady}
               onScan={onScan}
-              onSlow={() => setTooSlow(true)}
+              onSlow={() => downgradeToLite("3D scene below 35fps")}
             />
           </Suspense>
         </Canvas>

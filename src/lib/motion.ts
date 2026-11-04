@@ -1,37 +1,53 @@
 import Lenis from "lenis";
 import { gsap } from "gsap";
-import { ScrollTrigger } from "gsap/ScrollTrigger";
-
-gsap.registerPlugin(ScrollTrigger);
+import { getTier, onTierChange } from "./perf";
 
 /**
- * Motion system.
+ * Motion system — deliberately free of GSAP ScrollTrigger.
  *
- * - Lenis smooth scroll, driven by GSAP's ticker so ScrollTrigger reads
- *   the same scroll position on the same frame.
- * - A reveal manager: any element with `data-reveal="<kind>"` animates in
- *   when it scrolls into view. Kinds deliberately mix directions so the
- *   page doesn't move as one block:
- *     left | right | up | down | scale | clip-left | clip-right | clip-up
- *   Optional `data-reveal-delay` (seconds).
- * - Scrubbed parallax: `data-parallax-x="12"` slides an element by ±12%
- *   of its width across the viewport; negative values go the other way.
- *   `data-parallax-y` does the same vertically (in px).
+ * ScrollTrigger writes history.scrollRestoration on every refresh, and
+ * Firefox rate-limits the History API (~200 calls / 10s); once tripped,
+ * Firefox refuses pushState and every router link on the site goes dead.
+ * Nothing here touches the History API.
+ *
+ *  - Lenis smooth scroll (full tier only), driven by GSAP's ticker.
+ *  - Reveals: `data-reveal="<kind>"` animates in once, when the element
+ *    scrolls into view (IntersectionObserver). Kinds mix directions:
+ *      left | right | up | down | scale | clip-left | clip-right | clip-up
+ *    Optional `data-reveal-delay` (seconds).
+ *  - Parallax (full tier only): `data-parallax-x="12"` slides an element
+ *    ±12% of its width as its `[data-parallax-root]` crosses the viewport;
+ *    `data-parallax-y` is in px; `data-parallax-base` is a fixed % offset.
  *
  * Elements added later (data loading, route changes) are picked up by a
- * MutationObserver, so components only need the data attributes.
+ * MutationObserver that only binds them — it never triggers re-layout.
  */
-
-/** Diagnostic switches, only honoured together with ?debug=clicks. */
-export const debugOff = (flag: string) =>
-  typeof location !== "undefined" &&
-  location.search.includes("debug=clicks") &&
-  location.search.includes(flag);
 
 export const prefersReducedMotion = () =>
   typeof window !== "undefined" &&
   window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
+// Belt and braces: ignore redundant writes to history.scrollRestoration,
+// which Firefox counts against its History API rate limit.
+(function guardScrollRestoration() {
+  try {
+    const d = Object.getOwnPropertyDescriptor(History.prototype, "scrollRestoration");
+    if (!d?.get || !d.set) return;
+    Object.defineProperty(window.history, "scrollRestoration", {
+      configurable: true,
+      get() {
+        return d.get!.call(window.history);
+      },
+      set(v: ScrollRestoration) {
+        if (d.get!.call(window.history) !== v) d.set!.call(window.history, v);
+      },
+    });
+  } catch {
+    /* non-standard environment */
+  }
+})();
+
+// ── Smooth scroll ───────────────────────────────────────────────────
 let lenis: Lenis | null = null;
 let tick: ((time: number) => void) | null = null;
 
@@ -39,48 +55,17 @@ export function getLenis() {
   return lenis;
 }
 
-/**
- * Smooth scroll makes scrolling depend on JavaScript frame rate. On an
- * ordinary office PC that turns into lag and delayed clicks, so it only
- * runs on machines that report enough headroom, and switches itself off
- * if the first seconds show it can't keep up.
- */
-function deviceCanSmoothScroll() {
-  const nav = navigator as Navigator & { deviceMemory?: number };
-  const cores = nav.hardwareConcurrency ?? 4;
-  const memory = nav.deviceMemory ?? 8;
-  const coarse = window.matchMedia("(pointer: coarse)").matches; // touch: native is best
-  return !coarse && cores >= 8 && memory >= 8;
-}
-
-function probeFrameRate(onSlow: () => void) {
-  let frames = 0;
-  const start = performance.now();
-  const step = () => {
-    frames++;
-    const elapsed = performance.now() - start;
-    if (elapsed < 2000) requestAnimationFrame(step);
-    else if ((frames * 1000) / elapsed < 50) onSlow();
-  };
-  requestAnimationFrame(step);
-}
-
 export function startSmoothScroll() {
-  if (lenis || prefersReducedMotion() || !deviceCanSmoothScroll() || debugOff("nolenis")) return lenis;
+  if (lenis || getTier() !== "full" || prefersReducedMotion()) return lenis;
   lenis = new Lenis({
-    duration: 1.15,
+    duration: 1.1,
     easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
     smoothWheel: true,
     anchors: { offset: -96 },
   });
-  lenis.on("scroll", ScrollTrigger.update);
   tick = (time: number) => lenis?.raf(time * 1000);
   gsap.ticker.add(tick);
   gsap.ticker.lagSmoothing(0);
-  probeFrameRate(() => {
-    console.info("[motion] low frame rate, using native scrolling");
-    stopSmoothScroll();
-  });
   return lenis;
 }
 
@@ -106,163 +91,192 @@ export function lockScroll(locked: boolean) {
 // ── Reveals ─────────────────────────────────────────────────────────
 type Preset = { from: gsap.TweenVars; to: gsap.TweenVars };
 
-const EASE = "expo.out";
-const PRESETS: Record<string, Preset> = {
-  left: { from: { x: -90, autoAlpha: 0 }, to: { x: 0, autoAlpha: 1 } },
-  right: { from: { x: 90, autoAlpha: 0 }, to: { x: 0, autoAlpha: 1 } },
-  up: { from: { y: 70, autoAlpha: 0 }, to: { y: 0, autoAlpha: 1 } },
-  down: { from: { y: -50, autoAlpha: 0 }, to: { y: 0, autoAlpha: 1 } },
-  scale: { from: { scale: 0.92, autoAlpha: 0 }, to: { scale: 1, autoAlpha: 1 } },
-  "clip-left": {
-    from: { clipPath: "inset(0% 100% 0% 0%)" },
-    to: { clipPath: "inset(0% 0% 0% 0%)" },
-  },
-  "clip-right": {
-    from: { clipPath: "inset(0% 0% 0% 100%)" },
-    to: { clipPath: "inset(0% 0% 0% 0%)" },
-  },
-  "clip-up": {
-    from: { clipPath: "inset(100% 0% 0% 0%)" },
-    to: { clipPath: "inset(0% 0% 0% 0%)" },
-  },
+function presets(scale: number): Record<string, Preset> {
+  const x = 90 * scale;
+  const y = 70 * scale;
+  return {
+    left: { from: { x: -x, autoAlpha: 0 }, to: { x: 0, autoAlpha: 1 } },
+    right: { from: { x, autoAlpha: 0 }, to: { x: 0, autoAlpha: 1 } },
+    up: { from: { y, autoAlpha: 0 }, to: { y: 0, autoAlpha: 1 } },
+    down: { from: { y: -y * 0.7, autoAlpha: 0 }, to: { y: 0, autoAlpha: 1 } },
+    scale: { from: { scale: 0.94, autoAlpha: 0 }, to: { scale: 1, autoAlpha: 1 } },
+    "clip-left": { from: { clipPath: "inset(0% 100% 0% 0%)" }, to: { clipPath: "inset(0% 0% 0% 0%)" } },
+    "clip-right": { from: { clipPath: "inset(0% 0% 0% 100%)" }, to: { clipPath: "inset(0% 0% 0% 0%)" } },
+    "clip-up": { from: { clipPath: "inset(100% 0% 0% 0%)" }, to: { clipPath: "inset(0% 0% 0% 0%)" } },
+  };
+}
+
+let revealIO: IntersectionObserver | null = null;
+let observer: MutationObserver | null = null;
+const pending = new Set<HTMLElement>();
+
+function play(el: HTMLElement) {
+  pending.delete(el);
+  const lite = getTier() === "lite";
+  const preset = presets(lite ? 0.5 : 1)[el.dataset.reveal ?? "up"] ?? presets(1).up;
+  const isClip = "clipPath" in preset.from;
+  gsap.to(el, {
+    ...preset.to,
+    delay: parseFloat(el.dataset.revealDelay ?? "0") || 0,
+    duration: isClip ? (lite ? 1 : 1.4) : lite ? 0.8 : 1.2,
+    ease: isClip ? "expo.inOut" : "expo.out",
+    clearProps: isClip ? "clipPath" : "transform,opacity,visibility",
+  });
+}
+
+function bindReveal(el: HTMLElement) {
+  if (el.dataset.revealBound || !revealIO) return;
+  el.dataset.revealBound = "1";
+  const lite = getTier() === "lite";
+  const preset = presets(lite ? 0.5 : 1)[el.dataset.reveal ?? "up"] ?? presets(1).up;
+  gsap.set(el, preset.from);
+  pending.add(el);
+  revealIO.observe(el);
+}
+
+// ── Parallax (full tier only) ───────────────────────────────────────
+type ParallaxItem = {
+  el: HTMLElement;
+  root: Element;
+  x: number;
+  y: number;
+  base: number;
+  cur: number;
 };
 
-const DONE = "revealBound";
+const parallaxItems = new Set<ParallaxItem>();
+const visibleRoots = new Set<Element>();
+let parallaxIO: IntersectionObserver | null = null;
+let raf = 0;
 
-function bindReveal(el: HTMLElement): boolean {
-  if (el.dataset[DONE]) return false;
-  el.dataset[DONE] = "1";
-  const preset = PRESETS[el.dataset.reveal ?? "up"] ?? PRESETS.up;
-  const delay = parseFloat(el.dataset.revealDelay ?? "0") || 0;
-  const isClip = "clipPath" in preset.from;
-  gsap.set(el, preset.from);
-  ScrollTrigger.create({
-    trigger: el,
-    start: "top 90%",
-    once: true,
-    onEnter: () =>
-      gsap.to(el, {
-        ...preset.to,
-        delay,
-        duration: isClip ? 1.4 : 1.2,
-        ease: isClip ? "expo.inOut" : EASE,
-        clearProps: isClip ? "clipPath" : "transform",
-      }),
-  });
-  return true;
+function writeTransform(item: ParallaxItem, p: number) {
+  item.el.style.transform = `translate3d(${item.base + p * item.x}%, ${p * item.y}px, 0)`;
 }
 
-function bindParallax(el: HTMLElement): boolean {
-  if (el.dataset.parallaxBound) return false;
+function parallaxFrame() {
+  raf = 0;
+  if (!visibleRoots.size) return;
+  const vh = window.innerHeight;
+  parallaxItems.forEach((item) => {
+    if (!visibleRoots.has(item.root)) return;
+    const r = item.root.getBoundingClientRect();
+    const progress = Math.min(1, Math.max(0, (vh - r.top) / (vh + r.height)));
+    const target = progress * 2 - 1;
+    item.cur = Number.isNaN(item.cur) ? target : item.cur + (target - item.cur) * 0.12;
+    writeTransform(item, item.cur);
+  });
+  raf = requestAnimationFrame(parallaxFrame);
+}
+
+function bindParallax(el: HTMLElement) {
+  if (el.dataset.parallaxBound) return;
   el.dataset.parallaxBound = "1";
-  const x = parseFloat(el.dataset.parallaxX ?? "0");
-  const y = parseFloat(el.dataset.parallaxY ?? "0");
-  const base = parseFloat(el.dataset.parallaxBase ?? "0");
-  gsap.fromTo(
+  const item: ParallaxItem = {
     el,
-    { xPercent: base - x, y: -y },
-    {
-      xPercent: base + x,
-      y,
-      ease: "none",
-      scrollTrigger: {
-        trigger: el.closest("[data-parallax-root]") ?? el,
-        start: "top bottom",
-        end: "bottom top",
-        scrub: 0.6,
-      },
-    },
-  );
-  return true;
+    root: el.closest("[data-parallax-root]") ?? el,
+    x: parseFloat(el.dataset.parallaxX ?? "0"),
+    y: parseFloat(el.dataset.parallaxY ?? "0"),
+    base: parseFloat(el.dataset.parallaxBase ?? "0"),
+    cur: NaN,
+  };
+  if (getTier() !== "full" || prefersReducedMotion() || !parallaxIO) {
+    writeTransform(item, 0); // static resting position
+    return;
+  }
+  parallaxItems.add(item);
+  parallaxIO.observe(item.root);
 }
 
-/** Bind any new animated elements under root; returns how many were new. */
-function scan(root: ParentNode): number {
-  let bound = 0;
-  root.querySelectorAll<HTMLElement>("[data-reveal]").forEach((el) => {
-    if (bindReveal(el)) bound++;
-  });
+function stopParallax() {
+  if (raf) cancelAnimationFrame(raf);
+  raf = 0;
+  parallaxIO?.disconnect();
+  parallaxIO = null;
+  visibleRoots.clear();
+  parallaxItems.forEach((item) => writeTransform(item, 0));
+  parallaxItems.clear();
+}
+
+// ── Lifecycle ───────────────────────────────────────────────────────
+function scan(root: ParentNode) {
+  root.querySelectorAll<HTMLElement>("[data-reveal]").forEach(bindReveal);
   root
     .querySelectorAll<HTMLElement>("[data-parallax-x],[data-parallax-y]")
-    .forEach((el) => {
-      if (bindParallax(el)) bound++;
-    });
-  return bound;
-}
-
-let observer: MutationObserver | null = null;
-let resizeObs: ResizeObserver | null = null;
-let refreshTimer = 0;
-let lastRefresh = 0;
-
-/**
- * Debounced, rate-limited ScrollTrigger.refresh().
- *
- * Every refresh writes history.scrollRestoration and briefly inserts a
- * measuring element into <body>. Refreshing in response to *any* DOM
- * insertion therefore fed itself — a refresh every frame — and Firefox
- * rate-limits the History API (~200 calls / 10s), after which it refuses
- * pushState and every link on the site goes dead. So: only refresh when
- * new animated content was actually bound or the page height changed,
- * debounced, and never more than twice a second.
- */
-function queueRefresh() {
-  if (refreshTimer) return;
-  const wait = Math.max(150, 500 - (performance.now() - lastRefresh));
-  refreshTimer = window.setTimeout(() => {
-    refreshTimer = 0;
-    lastRefresh = performance.now();
-    ScrollTrigger.refresh();
-  }, wait);
+    .forEach(bindParallax);
 }
 
 export function startReveals() {
-  if (observer || debugOff("noreveal")) return;
-  if (prefersReducedMotion()) return;
+  if (observer || prefersReducedMotion()) return;
+
+  // Huge top margin: anything already *above* the viewport counts as seen,
+  // so content you jump past (anchors, back/forward) is never left hidden.
+  revealIO = new IntersectionObserver(
+    (entries) => {
+      entries.forEach((e) => {
+        if (!e.isIntersecting) return;
+        revealIO?.unobserve(e.target);
+        play(e.target as HTMLElement);
+      });
+    },
+    { rootMargin: "100000px 0px -10% 0px" },
+  );
+
+  if (getTier() === "full") {
+    parallaxIO = new IntersectionObserver((entries) => {
+      entries.forEach((e) => {
+        if (e.isIntersecting) visibleRoots.add(e.target);
+        else visibleRoots.delete(e.target);
+      });
+      if (visibleRoots.size && !raf) raf = requestAnimationFrame(parallaxFrame);
+    });
+  }
+
   scan(document);
   observer = new MutationObserver((records) => {
-    let bound = 0;
     for (const r of records) {
       r.addedNodes.forEach((n) => {
         if (n.nodeType !== 1 || !(n as Element).isConnected) return;
         const el = n as HTMLElement;
-        if (el.matches?.("[data-reveal]") && bindReveal(el)) bound++;
-        if (el.matches?.("[data-parallax-x],[data-parallax-y]") && bindParallax(el)) bound++;
-        bound += scan(el);
+        if (el.matches?.("[data-reveal]")) bindReveal(el);
+        if (el.matches?.("[data-parallax-x],[data-parallax-y]")) bindParallax(el);
+        scan(el);
       });
     }
-    // Only new animated content warrants a refresh (see queueRefresh).
-    if (bound > 0) queueRefresh();
   });
   observer.observe(document.body, { childList: true, subtree: true });
+}
 
-  // Content that loads later (images, data) shifts trigger positions:
-  // refresh when the page's height actually changes.
-  let lastHeight = 0;
-  resizeObs = new ResizeObserver(() => {
-    const h = document.documentElement.scrollHeight;
-    if (Math.abs(h - lastHeight) > 40) {
-      lastHeight = h;
-      queueRefresh();
+/** Forget elements that left the page (after a route change). */
+export function pruneMotion() {
+  pending.forEach((el) => {
+    if (!el.isConnected) {
+      revealIO?.unobserve(el);
+      pending.delete(el);
     }
   });
-  resizeObs.observe(document.body);
+  parallaxItems.forEach((item) => {
+    if (!item.el.isConnected) {
+      parallaxIO?.unobserve(item.root);
+      visibleRoots.delete(item.root);
+      parallaxItems.delete(item);
+    }
+  });
 }
 
 /** Admin: stop watching the DOM and drop every scroll animation. */
 export function stopReveals() {
   observer?.disconnect();
   observer = null;
-  resizeObs?.disconnect();
-  resizeObs = null;
-  ScrollTrigger.getAll().forEach((t) => t.kill());
+  revealIO?.disconnect();
+  revealIO = null;
+  pending.clear();
+  stopParallax();
 }
 
-/** Drop triggers whose elements left the page (after a route change). */
-export function pruneScrollTriggers() {
-  ScrollTrigger.getAll().forEach((t) => {
-    const trg = t.trigger as Element | undefined;
-    if (trg && !document.body.contains(trg)) t.kill();
-  });
-  queueRefresh();
-}
+// Dropping to lite mid-visit: native scroll, no parallax.
+onTierChange((t) => {
+  if (t === "lite") {
+    stopSmoothScroll();
+    stopParallax();
+  }
+});

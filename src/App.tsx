@@ -19,7 +19,7 @@ import NotFound from "@/pages/NotFound";
 import CookieConsent from "@/components/CookieConsent";
 import RouteCurtain from "@/components/PageTransition";
 import {
-  pruneScrollTriggers,
+  pruneMotion,
   scrollToTop,
   startReveals,
   startSmoothScroll,
@@ -159,7 +159,7 @@ export default function App() {
   useEffect(() => {
     if (isAdminPath) return;
     scrollToTop();
-    pruneScrollTriggers();
+    pruneMotion();
   }, [location.pathname, isAdminPath]);
 
   const toggleTheme = () => setTheme((prev) => (prev === "dark" ? "light" : "dark"));

@@ -5,7 +5,7 @@ import { ArrowUpRight, ChevronDown, Moon, Phone, ShoppingBag, Sun, X } from "luc
 import Logo from "./Logo";
 import { useCart } from "@/lib/cart";
 import { useCompanyInfo, useDepartments, useProducts } from "@/hooks/useSupabase";
-import { taglineFor } from "./DepartmentIndex";
+import { DepartmentIcon, taglineFor } from "./DepartmentIndex";
 import { lockScroll } from "@/lib/motion";
 
 /**
@@ -231,7 +231,8 @@ export default function Nav({
                           {String(i + 1).padStart(2, "0")}
                         </span>
                         <span className="min-w-0">
-                          <span className="block text-[17px] font-semibold leading-snug text-primary">
+                          <span className="flex items-center gap-2.5 text-[17px] font-semibold leading-snug text-primary">
+                            <DepartmentIcon slug={d.slug} name={d.name} size={19} className="shrink-0 text-slate-mid transition-colors group-hover:text-scan" />
                             {d.name}
                           </span>
                           <span className="mt-1 block text-sm leading-relaxed text-slate-mid">
@@ -319,7 +320,10 @@ export default function Nav({
                           to={`/products?department=${d.slug}`}
                           className="flex items-center justify-between rounded-xl px-1 py-3 text-[17px] text-primary"
                         >
-                          {d.name}
+                          <span className="flex items-center gap-3">
+                            <DepartmentIcon slug={d.slug} name={d.name} size={19} className="shrink-0 text-scan" />
+                            {d.name}
+                          </span>
                           <ArrowUpRight size={16} className="text-scan" />
                         </Link>
                       </li>

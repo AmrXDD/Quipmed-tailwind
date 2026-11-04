@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { Linkedin } from "lucide-react";
+import { BadgeCheck, Briefcase, Eye, Linkedin, MapPin, ShieldCheck, Stethoscope, Target, Zap } from "lucide-react";
 import DepartmentIndex from "@/components/DepartmentIndex";
 import ValuesList from "@/components/ValuesList";
 import { Eyebrow, PageHeader, PrimaryButton, TextLink } from "@/components/ui/primitives";
@@ -13,14 +13,17 @@ export default function About() {
 
   const values = [
     {
+      Icon: ShieldCheck,
       k: c.value_01 || "Reliable",
       d: "Time-tested equipment, validated supply chains and certified partners across 14 countries. We only distribute what we would stake our reputation on.",
     },
     {
+      Icon: Zap,
       k: c.value_02 || "Modern",
       d: "From 4K flexible endoscopy to immersive VR therapy, we bring in the technologies that will define the next decade of clinical practice.",
     },
     {
+      Icon: BadgeCheck,
       k: c.value_03 || "Strong",
       d: "Long-term relationships with Neusoft, Allengers, Tuttnauer, EMS Swiss and other manufacturers, backed by service teams on the ground in Kuwait.",
     },
@@ -66,8 +69,8 @@ export default function About() {
       <section className="mx-auto mt-24 max-w-[90rem] px-5 sm:px-8 md:mt-36 lg:px-12">
         <div className="grid border-t border-line md:grid-cols-2">
           {[
-            { label: "Mission", body: c.mission },
-            { label: "Vision", body: c.vision },
+            { label: "Mission", body: c.mission, Icon: Target },
+            { label: "Vision", body: c.vision, Icon: Eye },
           ].map((m, i) => (
             <article
               key={m.label}
@@ -75,7 +78,8 @@ export default function About() {
               className={`py-12 md:py-16 ${i === 1 ? "border-t border-line md:border-l md:border-t-0 md:pl-12" : "md:pr-12"}`}
             >
               <Eyebrow index={`0${i + 1}`}>{m.label}</Eyebrow>
-              <p className="mt-8 max-w-[30ch] text-balance text-[clamp(1.5rem,2.6vw,2.25rem)] font-medium leading-[1.2] tracking-[-0.02em] text-primary">
+              <m.Icon aria-hidden="true" strokeWidth={1.25} className="mt-8 h-9 w-9 text-scan" />
+              <p className="mt-5 max-w-[30ch] text-balance text-[clamp(1.5rem,2.6vw,2.25rem)] font-medium leading-[1.2] tracking-[-0.02em] text-primary">
                 {m.body}
               </p>
             </article>
@@ -168,17 +172,20 @@ export default function About() {
 
             <dl className="mt-10 grid grid-cols-1 border-t border-line sm:grid-cols-2">
               {[
-                { k: "Background", v: "Biomedical engineering" },
-                { k: "Based in", v: "Kuwait City · GCC" },
-                { k: "Focus areas", v: "Imaging · Surgical · CSSD" },
-                { k: "Role", v: "Operations & partnerships" },
+                { Icon: BadgeCheck, k: "Background", v: "Biomedical engineering" },
+                { Icon: MapPin, k: "Based in", v: "Kuwait City · GCC" },
+                { Icon: Stethoscope, k: "Focus areas", v: "Imaging · Surgical · CSSD" },
+                { Icon: Briefcase, k: "Role", v: "Operations & partnerships" },
               ].map((r, i) => (
                 <div
                   key={r.k}
                   className={`border-b border-line py-5 ${i % 2 === 1 ? "sm:border-l sm:pl-6" : "sm:pr-6"}`}
                 >
                   <dt className="font-mono text-[10.5px] uppercase tracking-[0.14em] text-slate-mid">{r.k}</dt>
-                  <dd className="mt-1.5 text-[15px] font-medium text-primary">{r.v}</dd>
+                  <dd className="mt-1.5 flex items-center gap-2 text-[15px] font-medium text-primary">
+                    <r.Icon aria-hidden="true" size={16} strokeWidth={1.5} className="shrink-0 text-scan" />
+                    {r.v}
+                  </dd>
                 </div>
               ))}
             </dl>

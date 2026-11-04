@@ -3,6 +3,7 @@ import { AnimatePresence, motion, LayoutGroup } from "framer-motion";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { ArrowUpRight, X, ShoppingBag, MessageSquareQuote, Package } from "lucide-react";
 import { PageHeader } from "@/components/ui/primitives";
+import { DepartmentIcon } from "@/components/DepartmentIndex";
 import { useProducts, useDepartments, useBrands } from "@/hooks/useSupabase";
 import type { Product } from "@/lib/types";
 import { useCart } from "@/lib/cart";
@@ -234,7 +235,10 @@ export default function Products() {
                               : "text-slate-light/75 hover:bg-white/[0.04] hover:text-primary",
                           ].join(" ")}
                         >
-                          <span className="truncate">{f.label}</span>
+                          <span className="flex min-w-0 items-center gap-2.5">
+                            <DepartmentIcon slug={f.key} name={f.label} size={16} className={`shrink-0 ${isActive ? "text-scan" : "text-slate-mid"}`} />
+                            <span className="truncate">{f.label}</span>
+                          </span>
                           <span
                             className={[
                               "tnum font-mono text-[11px]",

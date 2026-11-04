@@ -1,5 +1,15 @@
 import { Link } from "react-router-dom";
-import { ArrowUpRight } from "lucide-react";
+import {
+  ArrowUpRight,
+  Bed,
+  HeartPulse,
+  Microscope,
+  Scan,
+  ShieldCheck,
+  Stethoscope,
+  Syringe,
+  type LucideIcon,
+} from "lucide-react";
 import type { Department, Product } from "@/lib/types";
 
 /**
@@ -49,7 +59,8 @@ export default function DepartmentIndex({
               </span>
 
               <div className="min-w-0">
-                <h3 className="text-[clamp(1.5rem,3.2vw,2.6rem)] font-medium leading-[1.05] tracking-[-0.025em] text-primary transition-transform duration-700 ease-out-expo group-hover:translate-x-2">
+                <h3 className="flex items-start gap-[0.4em] text-[clamp(1.5rem,3.2vw,2.6rem)] font-medium leading-[1.05] tracking-[-0.025em] text-primary transition-transform duration-700 ease-out-expo group-hover:translate-x-2">
+                  <DepartmentIcon slug={d.slug} name={d.name} className="mt-[0.1em] h-[0.85em] w-[0.85em] shrink-0 text-slate-mid transition-colors duration-500 group-hover:text-scan" />
                   {d.name}
                 </h3>
                 <p className="mt-2 max-w-[60ch] text-[15px] text-slate-mid">
@@ -88,6 +99,33 @@ export default function DepartmentIndex({
       })}
     </ol>
   );
+}
+
+/** The client's original department icons (shown without their boxes). */
+export function departmentIcon(slug: string, name: string): LucideIcon {
+  const key = `${slug} ${name}`.toLowerCase();
+  if (key.includes("imag") || key.includes("diagnostic") || key.includes("radio")) return Scan;
+  if (key.includes("furniture") || key.includes("physio") || key.includes("rehab")) return Bed;
+  if (key.includes("steril") || key.includes("infection") || key.includes("cssd")) return ShieldCheck;
+  if (key.includes("surg") || key.includes("operat")) return Syringe;
+  if (key.includes("life") || key.includes("support") || key.includes("monitor") || key.includes("cardio")) return HeartPulse;
+  if (key.includes("patient") || key.includes("care") || key.includes("primary")) return Stethoscope;
+  return Microscope;
+}
+
+export function DepartmentIcon({
+  slug,
+  name,
+  className = "",
+  size,
+}: {
+  slug: string;
+  name: string;
+  className?: string;
+  size?: number;
+}) {
+  const Icon = departmentIcon(slug, name);
+  return <Icon aria-hidden="true" strokeWidth={1.25} size={size} className={className} />;
 }
 
 export function taglineFor(slug: string, name: string) {

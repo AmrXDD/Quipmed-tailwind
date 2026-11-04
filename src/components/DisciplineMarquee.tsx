@@ -1,6 +1,6 @@
 /**
  * Two oversized rows of type that drift in opposite directions as the
- * page scrolls (GSAP ScrollTrigger scrub via data-parallax-x). One row
+ * page scrolls (scroll-linked parallax via data-parallax-x, full tier). One row
  * solid, one outlined — a quiet, editorial break between sections.
  */
 export default function DisciplineMarquee({

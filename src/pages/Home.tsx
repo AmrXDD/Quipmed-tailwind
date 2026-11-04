@@ -9,6 +9,9 @@ import { Eyebrow, PrimaryButton, TextLink, useInViewOnce } from "@/components/ui
 import { useCompanyInfo, useBrands, useProducts, useDepartments } from "@/hooks/useSupabase";
 import { markPreloader, usePreloaderLeaving } from "@/lib/preloader";
 import { useThemeMode } from "@/lib/theme";
+import { useTier } from "@/lib/perf";
+import BrainStill from "@/components/BrainStill";
+import { BadgeCheck, ShieldCheck, Zap } from "lucide-react";
 
 // If the chunk can't load (e.g. a tab left open across a new deploy),
 // show the fallback instead of crashing the page.
@@ -24,14 +27,17 @@ const BrainScan = lazy(() =>
 
 const VALUES = [
   {
+    Icon: ShieldCheck,
     k: "Reliable",
     d: "Time-tested equipment, validated supply chains and certified manufacturers. We only distribute what we would put our own name behind.",
   },
   {
+    Icon: Zap,
     k: "Modern",
     d: "From 4K endoscopy to immersive VR therapy, we bring in the technologies that will shape the next decade of clinical practice in Kuwait.",
   },
   {
+    Icon: BadgeCheck,
     k: "Strong",
     d: "Long-term relationships with Neusoft, Allengers, Tuttnauer, EMS Swiss and more, supported by a service team on the ground in Kuwait.",
   },
@@ -43,6 +49,7 @@ export default function Home() {
   const { products } = useProducts();
   const { departments } = useDepartments();
   const theme = useThemeMode();
+  const tier = useTier();
   const leaving = usePreloaderLeaving();
 
   const titleRef = useRef<HTMLHeadingElement>(null);
@@ -141,15 +148,26 @@ export default function Home() {
 
           {/* Brain under the scanner */}
           <div className="relative mx-auto aspect-square w-full max-w-[34rem] lg:max-w-none">
-            <Suspense fallback={null}>
-              {sceneOn && <BrainScan
-                theme={theme}
-                onReady={onBrainReady}
-                onScan={onScan}
-                className="absolute inset-0"
-                fallback={<ScanVideo />}
-              />}
-            </Suspense>
+            {tier === "full" ? (
+              // Full: the live 3D scene. The matching still stands in while
+              // its code loads and right after an in-app visit to Home.
+              <Suspense fallback={<BrainStill theme={theme} className="absolute inset-0" />}>
+                {sceneOn ? (
+                  <BrainScan
+                    theme={theme}
+                    onReady={onBrainReady}
+                    onScan={onScan}
+                    className="absolute inset-0"
+                    fallback={<BrainStill theme={theme} onReady={onBrainReady} onScan={onScan} className="absolute inset-0" />}
+                  />
+                ) : (
+                  <BrainStill theme={theme} onScan={onScan} className="absolute inset-0" />
+                )}
+              </Suspense>
+            ) : (
+              // Lite: pre-rendered stills + CSS scan. No WebGL is downloaded.
+              <BrainStill theme={theme} onReady={onBrainReady} onScan={onScan} className="absolute inset-0" />
+            )}
 
             {/* Readout, set like the corner annotations on a scan film */}
             <div
@@ -255,7 +273,7 @@ export default function Home() {
             </h2>
           </div>
           <ValuesList
-            items={VALUES.map((v, i) => ({ k: c[`value_0${i + 1}`] || v.k, d: v.d }))}
+            items={VALUES.map((v, i) => ({ k: c[`value_0${i + 1}`] || v.k, d: v.d, Icon: v.Icon }))}
           />
         </div>
       </section>
@@ -299,28 +317,5 @@ export default function Home() {
         </div>
       </section>
     </>
-  );
-}
-
-/**
- * Shown until the 3D brain model is in /public/models (or without WebGL):
- * the original CT clip, black keyed out via luminance-to-alpha.
- */
-function ScanVideo() {
-  // Black background drops out with a blend mode (cheap, GPU-composited)
-  // instead of a per-frame SVG filter.
-  return (
-    <div className="absolute inset-0 grid place-items-center">
-      <video
-        src="/ct-scan.mp4"
-        autoPlay
-        loop
-        muted
-        playsInline
-        preload="metadata"
-        aria-hidden="true"
-        className="h-[72%] w-auto object-contain mix-blend-screen [.theme-white_&]:mix-blend-multiply [.theme-white_&]:invert"
-      />
-    </div>
   );
 }
